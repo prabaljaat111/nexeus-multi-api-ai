@@ -51,8 +51,8 @@ function useEntrance(root: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const html = document.documentElement;
     const el = root.current;
-    if (!el || !html.classList.contains("js-enter") || el.dataset.entered) return;
-    el.dataset.entered = "1";
+    if (!el || !html.classList.contains("js-enter") || el.dataset["entered"]) return;
+    el.dataset["entered"] = "1";
     const EXPO = "cubic-bezier(.16,1,.3,1)";
     const SOFT = "cubic-bezier(.22,.65,.28,1)";
     const SETTLE = "cubic-bezier(.33,1,.68,1)";

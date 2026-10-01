@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import FloatingMenu from "@/components/ui/liquid-morph-floating-menu";
 
 const POSTER =
   "https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/693205bf-8048-456a-879e-4e0a1b85a098.webp";
@@ -168,6 +169,7 @@ function Index() {
           </div>
         </footer>
       </div>
+      <FloatingMenu />
     </div>
   );
 }

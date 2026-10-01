@@ -21,7 +21,7 @@ function MenuButton({
   index,
 }: {
   label: string;
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
   isOpen: boolean;
   index: number;
 }) {
@@ -156,7 +156,7 @@ export default function FloatingMenu({ items }: FloatingMenuProps) {
           borderRadius: isOpen ? 32 : 72,
           scale: 1,
         }}
-        whileHover={isOpen ? undefined : { scale: 1.05 }}
+        whileHover={isOpen ? {} : { scale: 1.05 }}
         transition={{
           duration: 0.8,
           ease,

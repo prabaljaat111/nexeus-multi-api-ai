@@ -1,5 +1,6 @@
 // Server-only provider HTTP helpers. Never return raw upstream bodies or headers.
 import { DEFAULT_BASE_URLS, validateBaseUrl, type ProviderType } from "./connections.server";
+import { FLUX_MODELS, STABILITY_MODELS, openAiImageCaps } from "./image-catalog";
 
 export type TestStatus = "Connected" | "Unauthorized key" | "Invalid endpoint" | "Provider timed out" | "Rate limited" | "Provider unavailable";
 
@@ -12,14 +13,14 @@ export class ProviderError extends Error {
 export interface NormalizedModel {
   provider_model_id: string;
   display_name: string;
-  capabilities: Record<string, boolean>;
+  capabilities: Record<string, unknown>;
   context_window: number | null;
 }
 
 const TIMEOUT_MS = 15_000;
 const MAX_PAGES = 20;
 
-function resolveBase(provider: ProviderType, baseUrl: string | null): string {
+export function resolveBase(provider: ProviderType, baseUrl: string | null): string {
   // Any provider may use a custom (validated, SSRF-checked) base URL, e.g. a proxy.
   if (baseUrl) {
     try { return validateBaseUrl(baseUrl).replace(/\/+$/, ""); } catch { throw new ProviderError("Invalid endpoint"); }
@@ -59,6 +60,13 @@ function dataArray(body: unknown, key = "data"): Obj[] {
 
 export async function fetchModels(provider: ProviderType, baseUrl: string | null, apiKey: string): Promise<NormalizedModel[]> {
   const base = resolveBase(provider, baseUrl);
+
+  // Image-only providers have no model-list endpoint for these APIs: verify the key, then use the documented catalog.
+  if (provider === "stability" || provider === "flux") {
+    await testProvider(provider, baseUrl, apiKey);
+    const list = provider === "stability" ? STABILITY_MODELS : FLUX_MODELS;
+    return list.map((m) => ({ provider_model_id: m.id, display_name: m.name, capabilities: { ...m.caps }, context_window: null }));
+  }
 
   if (provider === "anthropic") {
     const out: NormalizedModel[] = [];
@@ -104,7 +112,8 @@ export async function fetchModels(provider: ProviderType, baseUrl: string | null
   return dataArray(body).flatMap((m): NormalizedModel[] => {
     const id = str(m["id"]);
     if (!id) return [];
-    const caps: Record<string, boolean> = {};
+    const caps: Record<string, unknown> = {};
+    if (provider === "openai") { const img = openAiImageCaps(id); if (img) Object.assign(caps, img); }
     let ctx: number | null = null;
     let name = id;
     if (provider === "openrouter") {
@@ -127,6 +136,8 @@ export async function testProvider(provider: ProviderType, baseUrl: string | nul
   if (provider === "anthropic") await getJson(`${base}/v1/models?limit=1`, { "x-api-key": apiKey, "anthropic-version": "2023-06-01" });
   else if (provider === "gemini") await getJson(`${base}/v1beta/models?pageSize=1`, { "x-goog-api-key": apiKey });
   // OpenRouter's model list is public, so check the key endpoint instead.
+  else if (provider === "stability") await getJson(`${base}/v1/user/account`, { authorization: `Bearer ${apiKey}` });
+  else if (provider === "flux") await getJson(`${base}/v1/credits`, { "x-key": apiKey });
   else if (provider === "openrouter") await getJson(`${base}/key`, { authorization: `Bearer ${apiKey}` });
   else dataArray(await getJson(`${base}/models`, { authorization: `Bearer ${apiKey}` }));
   return "Connected";

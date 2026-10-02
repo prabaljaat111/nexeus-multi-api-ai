@@ -18,7 +18,7 @@ function b64(bytes: Uint8Array): string {
   bytes.forEach((b) => (s += String.fromCharCode(b)));
   return btoa(s);
 }
-function unb64(s: string): Uint8Array {
+function unb64(s: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 }
 

@@ -14,6 +14,106 @@ export type Database = {
   }
   public: {
     Tables: {
+      artifact_generation_jobs: {
+        Row: {
+          attachment_id: string | null
+          chat_id: string | null
+          context_mode: string
+          created_at: string
+          error_message: string | null
+          id: string
+          instruction: string
+          model_id: string | null
+          output_format: string
+          output_message_id: string | null
+          requested_filename: string | null
+          source_message_id: string | null
+          status: string
+          summary: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attachment_id?: string | null
+          chat_id?: string | null
+          context_mode?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          instruction: string
+          model_id?: string | null
+          output_format: string
+          output_message_id?: string | null
+          requested_filename?: string | null
+          source_message_id?: string | null
+          status?: string
+          summary?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attachment_id?: string | null
+          chat_id?: string | null
+          context_mode?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          instruction?: string
+          model_id?: string | null
+          output_format?: string
+          output_message_id?: string | null
+          requested_filename?: string | null
+          source_message_id?: string | null
+          status?: string
+          summary?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artifact_generation_jobs_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "chat_attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artifact_generation_jobs_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artifact_generation_jobs_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artifact_generation_jobs_output_message_id_fkey"
+            columns: ["output_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artifact_generation_jobs_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artifact_generation_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_attachments: {
         Row: {
           attachment_type: string

@@ -21,3 +21,4 @@
 - Chat provider calls happen only in the `/api/chat-completion` server route (raw SSE needs a Response, so not a server function); it authenticates via bearer token and writes messages through a user-scoped client under RLS.
 - Edit/regenerate (Phase 1) delete the original message(s) client-side under RLS before resending — no branching/version history.
 - Image generation runs in the `generateImageJob` server function (not an edge function) using documented provider contracts in `image-gen.server.ts`; image capability comes only from the exact-id catalog in `image-catalog.ts` — avoids guessing provider support.
+- File (artifact) generation runs in the `generateArtifactJob` server function: the model returns Zod-validated JSON only and files are built by `artifact-builders.server.ts` — model output is never executed.

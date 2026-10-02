@@ -49,3 +49,13 @@ Google sign-in works out of the box with managed credentials. To use your own Go
 
 ## Manual setup
 1. Optional: turn on leaked-password protection under Cloud → Users → Auth Settings → Email.
+
+## Admin user management (/admin/users)
+Privileged mutations run in authenticated server functions (`src/lib/admin-users.functions.ts`) that verify the caller's session token and call `is_admin()`, then invoke security-definer SQL functions (`admin_set_approval`, `admin_set_disabled`, `admin_set_admin`) which re-check `is_admin()`, block self-disable, and block removing the last admin (advisory lock). Errors are mapped to friendly messages. Roles stay exclusively in `user_roles`.
+
+### Manual testing
+1. **First admin:** sign up at `/signup` with account A. The first account is automatically admin + approved. Open `/admin/users` — you see yourself as Admin/Approved.
+2. **Second user:** in a private window, sign up with account B. After sign-in B lands on `/disabled?reason=pending`.
+3. **Approve:** as A, click **Approve** on B. B clicks "Check again" and reaches `/chat`.
+4. **Disable/enable:** as A, **Disable** B → B is sent to `/disabled` on next navigation. **Enable** restores access. Note A's own Disable button is blocked, and removing A's admin role while A is the only admin fails with a friendly message.
+5. **Normal user blocked:** as B, open `/admin/users` → redirected to `/chat`. Calling the server functions directly as B returns "You need administrator access to do that."

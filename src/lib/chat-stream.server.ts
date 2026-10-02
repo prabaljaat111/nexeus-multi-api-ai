@@ -64,6 +64,7 @@ async function open(url: string, headers: Record<string, string>, body: unknown,
     if (!res.ok || !res.body) {
       // Inspect (never forward) the body only to classify Gemini's 400 invalid-key response.
       const text = res.status === 400 ? await res.text().catch(() => "") : (await res.body?.cancel().catch(() => undefined), "");
+      if (!res.ok) console.error("provider http", res.status, text.slice(0, 300));
       if (/API_KEY_INVALID|API key not valid/i.test(text)) throw new ChatStreamError("unauthorized_key");
       if (res.status === 400 && /not found|unsupported model|model_not_found|does not exist/i.test(text)) throw new ChatStreamError("model_unavailable");
       throw new ChatStreamError(mapStatus(res.status));

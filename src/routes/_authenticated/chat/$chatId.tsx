@@ -4,7 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { attachmentKeys, MessageAttachments, PendingChips, useAttachmentUploads, useChatAttachments, useDropZone, useExtract } from "@/components/attachments";
 import { AnalyzePicker, Citations, ContextChips, ToolFailureCard, ToolsMenu } from "@/components/chat-tools";
-import type { AttachmentRow } from "@/lib/attachments";
+import { isVisionImage, type AttachmentRow } from "@/lib/attachments";
 import { ArtifactDialog, ArtifactProgress, GeneratedFileCard, artifactJobToOptions, listArtifactJobs, useArtifactGeneration, type ArtifactFormat, type ArtifactJobRow, type ArtifactOptions } from "@/components/artifact-generation";
 import { GeneratedImageCard, ImageDialog, ImageProgress, jobToOptions, listImageJobs, useImageGeneration, type ImageJobRow, type ImageOptions } from "@/components/image-generation";
 import {
@@ -483,7 +483,7 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
   const [pickerOpen, setPickerOpen] = useState(false);
   const [contextRows, setContextRows] = useState<AttachmentRow[]>([]);
   useEffect(() => { setContextRows([]); }, [chatId]);
-  async function useExisting(rows: AttachmentRow[]) {
+  async function applyExisting(rows: AttachmentRow[]) {
     setContextRows(rows);
     const pending = rows.filter((a) => !a.extraction && !isVisionImage(a.mime_type));
     if (!pending.length) return;
@@ -547,7 +547,7 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
           </div>
         </div>
         <AnalyzePicker open={pickerOpen} onOpenChange={setPickerOpen} attachments={chatAttachments} selected={contextRows.map((a) => a.id)} vision={vision}
-          onConfirm={(rows) => void useExisting(rows)} />
+          onConfirm={(rows) => void applyExisting(rows)} />
         <p className="mt-1.5 text-center text-xs text-muted-foreground">{uploading ? "Waiting for uploads to finish…" : failed ? "Retry or remove failed uploads to send." : hint}</p>
       </form>
     </div>

@@ -85,6 +85,13 @@
       "when": 1790969524292,
       "tag": "0011_attachment_analysis",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790970100711,
+      "tag": "0012_lock_sensitive_columns",
+      "breakpoints": true
     }
   ]
 }

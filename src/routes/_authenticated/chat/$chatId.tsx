@@ -1,9 +1,11 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useChatStream, type StreamState } from "@/lib/chat-client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { attachmentKeys, MessageAttachments, PendingChips, useAttachmentUploads, useChatAttachments, useDropZone } from "@/components/attachments";
+import type { AttachmentRow } from "@/lib/attachments";
 import {
-  AlertCircle, AlertTriangle, ArrowDown, Bot, Check, ChevronsUpDown, Copy, Loader2, Pencil, RotateCcw, SearchX, SendHorizontal,
+  AlertCircle, AlertTriangle, ArrowDown, Bot, Check, ChevronsUpDown, Copy, Loader2, Paperclip, Pencil, RotateCcw, SearchX, SendHorizontal,
   SlidersHorizontal, Square, Trash2,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -54,10 +56,18 @@ function ChatThread() {
     onError: (e) => notify.fromError(e),
   });
 
+  const attachments = useChatAttachments(chatId);
+  const attachmentsByMessage = useMemo(() => {
+    const map = new Map<string, AttachmentRow[]>();
+    (attachments.data ?? []).forEach((a) => { if (a.message_id) map.set(a.message_id, [...(map.get(a.message_id) ?? []), a]); });
+    return map;
+  }, [attachments.data]);
+  const refreshAttachments = useCallback(() => { void qc.invalidateQueries({ queryKey: attachmentKeys.chat(chatId) }); }, [qc, chatId]);
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: chatKeys.messages(chatId) });
     void qc.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
     void qc.invalidateQueries({ queryKey: chatKeys.list });
+    void qc.invalidateQueries({ queryKey: attachmentKeys.chat(chatId) });
   }, [qc, chatId]);
   const onStreamError = useCallback((m: string) => notify.error(m), []);
   const stream = useChatStream(refresh, onStreamError);
@@ -131,9 +141,10 @@ function ChatThread() {
       <MessageList query={messages} hasModels={(models.data?.length ?? 0) > 0} stream={stream.state} canAct={!!selectedModel && !stream.busy}
         editingId={editing?.id ?? null}
         onRegenerate={(a) => void regenerate(a)} onEdit={setEditing} onCancelEdit={() => setEditing(null)}
-        onSubmitEdit={(m, t) => void resendEdited(m, t)} onDelete={(m) => removeMsg.mutateAsync(m.id).then(() => undefined, () => undefined)} />
-      <Composer disabled={!selectedModel} busy={stream.busy} onStop={stream.stop}
-        onSend={(text) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text }); }} hint={hint} />
+        onSubmitEdit={(m, t) => void resendEdited(m, t)} onDelete={(m) => removeMsg.mutateAsync(m.id).then(() => undefined, () => undefined)}
+        attachmentsByMessage={attachmentsByMessage} onAttachmentsChanged={refreshAttachments} />
+      <Composer chatId={chatId} disabled={!selectedModel} busy={stream.busy} onStop={stream.stop}
+        onSend={(text, attachmentIds) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text, attachmentIds }); }} hint={hint} />
     </div>
   );
 }
@@ -245,11 +256,12 @@ function ChatSettings({ chat, onSave }: { chat: ChatDetail; onSave: (p: ChatPatc
   );
 }
 
-function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete }: {
+function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachmentsByMessage, onAttachmentsChanged }: {
   query: { isPending: boolean; isError: boolean; data: ChatMessage[] | undefined; refetch: () => unknown };
   hasModels: boolean; stream: StreamState; canAct: boolean; editingId: string | null;
   onRegenerate: (lastAssistant: ChatMessage | null) => void; onEdit: (m: ChatMessage) => void; onCancelEdit: () => void;
   onSubmitEdit: (m: ChatMessage, text: string) => void; onDelete: (m: ChatMessage) => Promise<void>;
+  attachmentsByMessage: Map<string, AttachmentRow[]>; onAttachmentsChanged: () => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -289,7 +301,8 @@ function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate
             canRegenerate={canAct && !streaming && !!last && (m.id === lastAssistant?.id)}
             canEdit={canAct && !streaming && m.role === "user" && m.id === lastUserId}
             onRegenerate={() => onRegenerate(m)} onEdit={() => onEdit(m)} onCancelEdit={onCancelEdit}
-            onSubmitEdit={(t) => onSubmitEdit(m, t)} onDelete={() => onDelete(m)} />
+            onSubmitEdit={(t) => onSubmitEdit(m, t)} onDelete={() => onDelete(m)}
+            attachments={attachmentsByMessage.get(m.id)} onAttachmentsChanged={onAttachmentsChanged} />
         ))}
         {streaming && stream.pendingUserText && <StaticBubble role="user" content={stream.pendingUserText} />}
         {streaming && (stream.text
@@ -335,9 +348,10 @@ function ActionButton({ label, onClick, children }: { label: string; onClick: ()
   return <Button type="button" size="icon" variant="ghost" className="size-7 text-muted-foreground" aria-label={label} title={label} onClick={onClick}>{children}</Button>;
 }
 
-const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete }: {
+const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachments, onAttachmentsChanged }: {
   message: ChatMessage; canAct: boolean; isEditing: boolean; canRegenerate: boolean; canEdit: boolean;
   onRegenerate: () => void; onEdit: () => void; onCancelEdit: () => void; onSubmitEdit: (t: string) => void; onDelete: () => Promise<void>;
+  attachments?: AttachmentRow[]; onAttachmentsChanged: () => void;
 }) {
   const isUser = m.role === "user";
   const [draft, setDraft] = useState(m.content);
@@ -368,6 +382,7 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
         {m.status === "error" && <p className="mt-2 flex items-center gap-1.5 text-xs text-destructive"><AlertCircle className="size-3.5" />{m.error_message ?? "This response failed."}</p>}
         {m.status === "stopped" && <p className="mt-2 text-xs italic text-muted-foreground">Response stopped.</p>}
       </div>
+      {attachments && attachments.length > 0 && <div className="max-w-[85%]"><MessageAttachments items={attachments} onDeleted={onAttachmentsChanged} /></div>}
       <div className={cn("mt-1 flex flex-wrap items-center gap-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100",
         (canRegenerate && m.status !== "complete") && "sm:opacity-100")}>
         {!isUser && m.model_label && <span className="mr-1 text-xs text-muted-foreground">{m.model_label}</span>}
@@ -384,37 +399,52 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
   );
 });
 
-function Composer({ disabled, busy, hint, onSend, onStop }: { disabled: boolean; busy: boolean; hint: string; onSend: (text: string) => void; onStop: () => void }) {
+function Composer({ chatId, disabled, busy, hint, onSend, onStop }: { chatId: string; disabled: boolean; busy: boolean; hint: string; onSend: (text: string, attachmentIds: string[]) => void; onStop: () => void }) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const uploads = useAttachmentUploads(chatId);
+  const drop = useDropZone(uploads.add, !disabled);
+  const uploading = uploads.items.some((i) => i.status === "uploading");
+  const failed = uploads.items.some((i) => i.status === "error");
+  const ready = uploads.items.filter((i) => i.status === "done" && i.row);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
   }, [text]);
+  const canSend = !disabled && !busy && !uploading && !failed && (!!text.trim() || ready.length > 0);
   const submit = () => {
-    const t = text.trim();
-    if (!t || disabled || busy) return;
+    if (!canSend) return;
+    let t = text.trim();
     if (t.length > 32_000) { notify.error("Your message is too long (max 32,000 characters)."); return; }
-    onSend(t);
+    if (!t) t = `Attached: ${ready.map((i) => i.file.name).join(", ")}`.slice(0, 2000);
+    onSend(t, ready.map((i) => i.row!.id));
     setText("");
+    uploads.clear();
   };
   return (
-    <div className="border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+    <div className="border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm" {...drop.props}>
       <form className="mx-auto max-w-3xl" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        <div className="flex items-end gap-2 rounded-lg border bg-card p-2 shadow-sm focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring/30">
-          <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} rows={1}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
-            placeholder={disabled ? "Select a model to start" : "Message…"} aria-label="Message"
-            className="min-h-10 flex-1 resize-none overflow-y-auto border-0 bg-transparent shadow-none focus-visible:ring-0" />
-          {busy ? (
-            <Button type="button" size="icon" variant="secondary" onClick={onStop} aria-label="Stop response"><Square className="size-4" /></Button>
-          ) : (
-            <Button type="submit" size="icon" disabled={disabled || !text.trim()} aria-label="Send"><SendHorizontal className="size-4" /></Button>
-          )}
+        <div className={cn("rounded-lg border bg-card p-2 shadow-sm focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring/30", drop.over && "border-primary ring-2 ring-primary/30")}>
+          {drop.over && <p className="pb-2 text-center text-xs text-primary">Drop files to attach (max 50 MB each)</p>}
+          <PendingChips items={uploads.items} onRemove={uploads.remove} onRetry={uploads.retry} />
+          <div className="flex items-end gap-2">
+            <input ref={fileRef} type="file" multiple hidden onChange={(e) => { if (e.target.files) uploads.add(e.target.files); e.target.value = ""; }} />
+            <Button type="button" size="icon" variant="ghost" disabled={disabled} onClick={() => fileRef.current?.click()} aria-label="Attach files" title="Attach files"><Paperclip className="size-4" /></Button>
+            <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} rows={1}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
+              placeholder={disabled ? "Select a model to start" : "Message…"} aria-label="Message"
+              className="min-h-10 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent shadow-none focus-visible:ring-0" />
+            {busy ? (
+              <Button type="button" size="icon" variant="secondary" onClick={onStop} aria-label="Stop response"><Square className="size-4" /></Button>
+            ) : (
+              <Button type="submit" size="icon" disabled={!canSend} aria-label="Send"><SendHorizontal className="size-4" /></Button>
+            )}
+          </div>
         </div>
-        <p className="mt-1.5 text-center text-xs text-muted-foreground">{hint}</p>
+        <p className="mt-1.5 text-center text-xs text-muted-foreground">{uploading ? "Waiting for uploads to finish…" : failed ? "Retry or remove failed uploads to send." : hint}</p>
       </form>
     </div>
   );

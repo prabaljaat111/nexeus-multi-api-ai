@@ -65,6 +65,59 @@ export type Database = {
         }
         Relationships: []
       }
+      models: {
+        Row: {
+          capabilities: Json
+          connection_id: string
+          context_window: number | null
+          created_at: string
+          display_name: string
+          enabled: boolean
+          fetched_at: string
+          id: string
+          input_cost_per_million: number | null
+          output_cost_per_million: number | null
+          provider_model_id: string
+          updated_at: string
+        }
+        Insert: {
+          capabilities?: Json
+          connection_id: string
+          context_window?: number | null
+          created_at?: string
+          display_name: string
+          enabled?: boolean
+          fetched_at?: string
+          id?: string
+          input_cost_per_million?: number | null
+          output_cost_per_million?: number | null
+          provider_model_id: string
+          updated_at?: string
+        }
+        Update: {
+          capabilities?: Json
+          connection_id?: string
+          context_window?: number | null
+          created_at?: string
+          display_name?: string
+          enabled?: boolean
+          fetched_at?: string
+          id?: string
+          input_cost_per_million?: number | null
+          output_cost_per_million?: number | null
+          provider_model_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "models_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -132,6 +185,14 @@ export type Database = {
       admin_set_disabled: {
         Args: { _disabled: boolean; _user_id: string }
         Returns: undefined
+      }
+      can_manage_connection: {
+        Args: { _connection_id: string }
+        Returns: boolean
+      }
+      can_view_connection: {
+        Args: { _connection_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {

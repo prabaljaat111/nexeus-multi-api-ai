@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, KeyRound, Loader2, Pencil, Plus, PlugZap, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { EmptyState, ErrorState } from "@/components/states";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { notify } from "@/lib/toast";
+import { fetchConnectionModels, testConnection } from "@/lib/models.functions";
 import { PROVIDERS, SAFE_CONNECTION_COLUMNS, deleteConnection, upsertConnection, type ProviderValue } from "@/lib/connections.functions";
 
 type Scope = "personal" | "global";
@@ -26,6 +27,9 @@ export interface ConnectionRow {
   base_url: string | null;
   key_hint: string | null;
   enabled: boolean;
+  last_tested_at: string | null;
+  last_test_status: string | null;
+  last_test_message: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,7 +56,34 @@ export function ConnectionsManager({ scope, canEdit }: { scope: Scope; canEdit: 
     },
   });
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["connections"] });
+  const counts = useQuery({
+    queryKey: ["model-counts", scope],
+    queryFn: async (): Promise<Record<string, number>> => {
+      const { data, error } = await supabase.from("models").select("connection_id");
+      if (error) throw new Error("Couldn't load model counts.");
+      const out: Record<string, number> = {};
+      data.forEach((r) => { out[r.connection_id] = (out[r.connection_id] ?? 0) + 1; });
+      return out;
+    },
+  });
+
+  const refresh = async () => {
+    await qc.invalidateQueries({ queryKey: ["connections"] });
+    await qc.invalidateQueries({ queryKey: ["model-counts"] });
+    await qc.invalidateQueries({ queryKey: ["models"] });
+  };
+  const test = useServerFn(testConnection);
+  const fetchModels = useServerFn(fetchConnectionModels);
+  const testM = useMutation({
+    mutationFn: (id: string) => test({ data: { connectionId: id } }),
+    onSuccess: (r) => { if (r.ok) notify.success("Connected"); else notify.error(r.status); void refresh(); },
+    onError: (e) => notify.fromError(e),
+  });
+  const fetchM = useMutation({
+    mutationFn: (id: string) => fetchModels({ data: { connectionId: id } }),
+    onSuccess: (r) => { notify.success(`Fetched ${r.count} model${r.count === 1 ? "" : "s"}`); void refresh(); },
+    onError: (e) => notify.fromError(e),
+  });
 
   const toggle = useMutation({
     mutationFn: (c: ConnectionRow) =>
@@ -101,9 +132,24 @@ export function ConnectionsManager({ scope, canEdit }: { scope: Scope; canEdit: 
                 <p className="mt-1 truncate text-xs text-muted-foreground">
                   Key {c.key_hint ?? "•••"}{c.base_url ? ` · ${c.base_url}` : ""}
                 </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {c.last_tested_at ? (
+                    <span className={c.last_test_status === "success" ? "text-primary" : "text-destructive"}>
+                      {c.last_test_status === "success" ? "Connected" : c.last_test_message ?? "Test failed"} · {new Date(c.last_tested_at).toLocaleString()}
+                    </span>
+                  ) : "Not tested yet"}
+                  {" · "}
+                  {counts.data?.[c.id] ? `${counts.data[c.id]} models` : "No models fetched yet"}
+                </p>
               </div>
               {canEdit && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="outline" disabled={testM.isPending && testM.variables === c.id} onClick={() => testM.mutate(c.id)}>
+                    {testM.isPending && testM.variables === c.id ? <Loader2 className="size-4 animate-spin" /> : <PlugZap className="size-4" />} Test connection
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={fetchM.isPending && fetchM.variables === c.id} onClick={() => fetchM.mutate(c.id)}>
+                    {fetchM.isPending && fetchM.variables === c.id ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />} Fetch models
+                  </Button>
                   <Switch checked={c.enabled} disabled={toggle.isPending} onCheckedChange={() => toggle.mutate(c)} aria-label={c.enabled ? "Disable connection" : "Enable connection"} />
                   <Button size="icon" variant="ghost" onClick={() => setEditing(c)} aria-label="Edit"><Pencil className="size-4" /></Button>
                   <ConfirmDialog

@@ -8,6 +8,8 @@ export const PROVIDERS = [
   { value: "gemini", label: "Google Gemini" },
   { value: "openrouter", label: "OpenRouter" },
   { value: "openai_compatible", label: "OpenAI-compatible" },
+  { value: "stability", label: "Stability AI (images)" },
+  { value: "flux", label: "FLUX / Black Forest Labs (images)" },
 ] as const;
 export type ProviderValue = (typeof PROVIDERS)[number]["value"];
 
@@ -20,7 +22,7 @@ const upsertSchema = z
     id: z.string().uuid().optional(),
     scope: z.enum(["personal", "global"]),
     name: z.string().trim().min(1, "Name is required").max(100),
-    providerType: z.enum(["openai", "anthropic", "gemini", "openrouter", "openai_compatible"]),
+    providerType: z.enum(["openai", "anthropic", "gemini", "openrouter", "openai_compatible", "stability", "flux"]),
     baseUrl: z.string().trim().max(500).optional(),
     apiKey: z.string().trim().min(8, "API key looks too short").max(4000).optional(),
     enabled: z.boolean(),

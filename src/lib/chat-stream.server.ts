@@ -32,7 +32,7 @@ export interface StreamParams {
   signal: AbortSignal; // client stop
 }
 
-export interface StreamResult { finishReason: string; inputTokens?: number; outputTokens?: number }
+export interface StreamResult { finishReason: string; inputTokens?: number | undefined; outputTokens?: number | undefined }
 
 /** Time allowed to receive response headers, and max silence between chunks. */
 const CONNECT_TIMEOUT_MS = 60_000;

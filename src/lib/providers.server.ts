@@ -125,6 +125,8 @@ export async function testProvider(provider: ProviderType, baseUrl: string | nul
   const base = resolveBase(provider, baseUrl);
   if (provider === "anthropic") await getJson(`${base}/v1/models?limit=1`, { "x-api-key": apiKey, "anthropic-version": "2023-06-01" });
   else if (provider === "gemini") await getJson(`${base}/v1beta/models?pageSize=1`, { "x-goog-api-key": apiKey });
+  // OpenRouter's model list is public, so check the key endpoint instead.
+  else if (provider === "openrouter") await getJson(`${base}/key`, { authorization: `Bearer ${apiKey}` });
   else dataArray(await getJson(`${base}/models`, { authorization: `Bearer ${apiKey}` }));
   return "Connected";
 }

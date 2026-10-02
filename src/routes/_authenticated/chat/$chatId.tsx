@@ -63,7 +63,6 @@ function ChatThread() {
     (attachments.data ?? []).forEach((a) => { if (a.message_id) map.set(a.message_id, [...(map.get(a.message_id) ?? []), a]); });
     return map;
   }, [attachments.data]);
-  const refreshAttachments = useCallback(() => { void qc.invalidateQueries({ queryKey: attachmentKeys.chat(chatId) }); }, [qc, chatId]);
   const imageModels = useQuery({ queryKey: chatKeys.imageModels, queryFn: listImageModels });
   const imageJobs = useQuery({ queryKey: chatKeys.imageJobs(chatId), queryFn: () => listImageJobs(chatId) });
   const jobsByMessage = useMemo(() => {

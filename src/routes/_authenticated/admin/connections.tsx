@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plug } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/states";
+import { ConnectionsManager } from "@/components/connections-manager";
 
 export const Route = createFileRoute("/_authenticated/admin/connections")({
   head: () => ({
@@ -10,13 +9,15 @@ export const Route = createFileRoute("/_authenticated/admin/connections")({
       { name: "description", content: "Manage workspace-wide AI provider connections." },
       { property: "og:title", content: "Connections — Admin — Unified AI Workspace" },
       { property: "og:description", content: "Manage workspace-wide AI provider connections." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
     ],
   }),
   component: () => (
     <>
-      <PageHeader title="Workspace connections" description="Admin · shared AI providers" />
-      <EmptyState icon={Plug} title="No shared connections" description="Workspace-wide providers arrive in a later phase." />
+      <PageHeader title="Workspace connections" description="Admin · shared AI providers available to all approved users" />
+      <div className="p-4"><ConnectionsManager scope="global" canEdit /></div>
     </>
   ),
 });

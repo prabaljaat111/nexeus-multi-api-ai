@@ -156,3 +156,19 @@ Compare mode, file uploads, RAG/knowledge, image generation, voice, branching/ve
 - **Sources:** each file-grounded answer stores the excerpt locations (PDF page, sheet + rows, DOCX section/table, CSV rows, text lines) and shows them under the reply.
 - **Vision:** only models explicitly marked vision-capable (OpenRouter models listing image input; known Claude 3+/4+, Gemini 1.5+, GPT-4o/4.1/5, o1/o3/o4-mini families) — re-fetch models to update flags. PNG/JPEG/WebP up to 5 MB, max 4 per message; images are loaded server-side and sent in each provider's documented format. Other models are refused with a clear message.
 - **Tools menu:** Upload file, Analyze selected attachment, Generate image, Create CSV/XLSX/DOCX/PDF — each shows running, done and failed states with Retry.
+
+## Block 14 — Production handoff
+
+**Architecture:** TanStack Start app on Lovable Cloud (Postgres + RLS, Auth, private Storage). All provider calls run server-side (`createServerFn` handlers and the `/api/chat-completion` route); no separate Edge Functions are used.
+
+**Fixed in this audit:** signed-in users could read the encrypted key column on `connections` and the raw `extracted_text` on `attachment_extractions` through the Data API, and could edit any column of models on their own connections. Grants are now column-scoped: those two columns are server-only, and users can only toggle `models.enabled`.
+
+**Required secrets (server-only):** `CONNECTION_ENCRYPTION_KEY` (set), `APP_ORIGIN` (comma-separated extra allowed origins for chat requests, e.g. `https://nexeus.revnlabel.in`; same-origin is always allowed), optional `ALLOW_LOCAL_PROVIDER_URLS` (local dev only). No secret is in `VITE_*` variables.
+
+**Auth redirects:** add `https://<your-domain>/auth/callback` and `/reset-password` to allowed redirect URLs in Cloud → Users → Auth settings. With your own Google client, set its redirect URI to the one shown there.
+
+**Storage:** bucket `chat-attachments` is private with no client policies; every access is a 5-minute signed URL created after a server-side ownership check.
+
+**Manual QA checklist:** sign up second account → pending screen; approve in /admin/users; disable → blocked; add connection → Test → Fetch models; chat stream + Stop + Regenerate; upload file, ask about it, check Sources; generate image (needs OpenAI/Stability/FLUX) and an XLSX; try a 51 MB file (refused); check phone width.
+
+**Deferred / known limits:** no virus scanning; PDFs limited to Western European characters; OpenAI/Stability image jobs can't be cancelled upstream; OpenAI-compatible endpoints can't be marked image-capable; scanned PDFs and PPTX are not analysed; no compliance certifications.

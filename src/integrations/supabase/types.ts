@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      chats: {
+        Row: {
+          created_at: string
+          id: string
+          is_archived: boolean
+          max_tokens: number | null
+          selected_connection_id: string | null
+          selected_model_id: string | null
+          system_prompt: string | null
+          temperature: number | null
+          title: string
+          top_p: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          max_tokens?: number | null
+          selected_connection_id?: string | null
+          selected_model_id?: string | null
+          system_prompt?: string | null
+          temperature?: number | null
+          title?: string
+          top_p?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          max_tokens?: number | null
+          selected_connection_id?: string | null
+          selected_model_id?: string | null
+          system_prompt?: string | null
+          temperature?: number | null
+          title?: string
+          top_p?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chats_selected_connection_id_fkey"
+            columns: ["selected_connection_id"]
+            isOneToOne: false
+            referencedRelation: "connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chats_selected_model_id_fkey"
+            columns: ["selected_model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connections: {
         Row: {
           base_url: string | null
@@ -64,6 +124,66 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          chat_id: string
+          content: string
+          created_at: string
+          error_message: string | null
+          id: string
+          input_tokens: number | null
+          model_id: string | null
+          output_tokens: number | null
+          provider_message_id: string | null
+          role: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          chat_id: string
+          content?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_tokens?: number | null
+          model_id?: string | null
+          output_tokens?: number | null
+          provider_message_id?: string | null
+          role: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: string
+          content?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_tokens?: number | null
+          model_id?: string | null
+          output_tokens?: number | null
+          provider_message_id?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       models: {
         Row: {
@@ -203,6 +323,7 @@ export type Database = {
       }
       is_active_approved_user: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      owns_chat: { Args: { _chat_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

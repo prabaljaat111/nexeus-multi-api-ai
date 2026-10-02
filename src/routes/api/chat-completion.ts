@@ -23,6 +23,7 @@ const inputSchema = z.object({
   temperature: z.number().min(0).max(2).nullable().optional(),
   maxTokens: z.number().int().min(1).max(1_000_000).nullable().optional(),
   topP: z.number().gt(0).max(1).nullable().optional(),
+  attachmentIds: z.array(z.string().uuid()).max(20).optional(),
 }).refine((d) => d.regenerate || (d.message && d.message.trim().length > 0), { message: "Message is required" });
 
 function json(status: number, code: string, message: string) {
@@ -106,16 +107,29 @@ export const Route = createFileRoute("/api/chat-completion")({
           .gte("created_at", new Date(Date.now() - 10 * 60_000).toISOString()).limit(1);
         if (inflight?.length) return json(409, "busy", "A response is already being generated in this chat.");
 
+        // --- Validate attachments: owned by this user, in this chat, not yet linked ---
+        const attachmentIds = input.regenerate ? [] : [...new Set(input.attachmentIds ?? [])];
+        if (attachmentIds.length) {
+          const { data: atts } = await sb.from("chat_attachments").select("id, user_id, chat_id, message_id, processing_status").in("id", attachmentIds);
+          const ok = (atts ?? []).filter((a) => a.user_id === userId && a.chat_id === chat.id && !a.message_id && a.processing_status === "uploaded");
+          if (ok.length !== attachmentIds.length) return json(400, "bad_attachment", "One or more attachments are unavailable. Remove them and try again.");
+        }
+
         // --- Persist user message (idempotent by requestId) ---
         const { count: priorUser } = await sb.from("messages").select("id", { count: "exact", head: true }).eq("chat_id", chat.id).eq("role", "user");
         if (!input.regenerate) {
-          const { error } = await sb.from("messages").insert({
+          const { data: userMsg, error } = await sb.from("messages").insert({
             chat_id: chat.id, role: "user", content: input.message!.trim(), client_request_id: input.requestId,
-          });
-          if (error) {
-            if (error.code === "23505") return json(409, "duplicate", "This message was already sent.");
-            console.error("save user message failed", error.code);
+          }).select("id").single();
+          if (error || !userMsg) {
+            if (error?.code === "23505") return json(409, "duplicate", "This message was already sent.");
+            console.error("save user message failed", error?.code);
             return json(500, "save_failed", "Couldn't save your message. Please try again.");
+          }
+          if (attachmentIds.length) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            await supabaseAdmin.from("chat_attachments").update({ message_id: userMsg.id })
+              .in("id", attachmentIds).eq("user_id", userId).eq("chat_id", chat.id).is("message_id", null);
           }
           if ((priorUser ?? 0) === 0 && chat.title === "New chat") {
             await sb.from("chats").update({ title: autoTitle(input.message!) }).eq("id", chat.id);

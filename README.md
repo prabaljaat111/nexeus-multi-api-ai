@@ -117,3 +117,13 @@ Auth (email + Google), approval workflow, roles, admin users, encrypted personal
 
 ### Deferred (Phase 2/3)
 Compare mode, file uploads, RAG/knowledge, image generation, voice, branching/version history, usage/cost dashboards, account-deletion cleanup.
+
+## File attachments (Block 10)
+
+- **Bucket:** private `chat-attachments` (public access off, 50 MB per-object limit; project upload limit also 50 MB). No storage policies exist for browser roles, so objects are reachable only through server code.
+- **Limit:** 50 MB (52,428,800 bytes) per file — checked in the browser, by the server before issuing an upload URL, after upload, by a table check, and by the bucket.
+- **Flow:** `createAttachmentUpload` → short-lived signed upload URL scoped to `user/{userId}/{yyyy-mm}/{uuid}-{sanitized-name}` → direct browser upload with progress → `completeAttachmentUpload` verifies the object and saves metadata. Sending a message passes `attachmentIds`; `/api/chat-completion` checks ownership/chat/unlinked state and links them to the new user message.
+- **Downloads:** only via `getAttachmentDownloadUrl`, which returns a 5-minute signed URL after an RLS-scoped ownership check. No permanent/public URLs.
+- **Delete:** `deleteAttachment` removes the object and the row (owner only); attached files require confirmation.
+- **Previews (allow-list):** PNG/JPEG/GIF/WebP/AVIF/BMP thumbnails; PDF as an open/download card (not embedded); TXT/MD/CSV as a 2 KB plain-text preview; MP4/WebM/Ogg video and common audio via native players. Everything else — including SVG, HTML, JS, executables and archives — is download-only and never rendered.
+- **Limitations:** files are not sent to AI models yet; no malware scanning; signed URLs work for anyone holding them until they expire (5 min).

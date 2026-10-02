@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import FloatingMenu from "@/components/ui/liquid-morph-floating-menu";
 
@@ -90,6 +90,11 @@ function useEntrance(root: React.RefObject<HTMLDivElement | null>) {
 
 function Index() {
   const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add("nx");
+    return () => html.classList.remove("nx", "js-enter");
+  }, []);
   useEntrance(ref);
   return (
     <div className="nx-root" ref={ref}>
@@ -114,9 +119,9 @@ function Index() {
           <p className="abs lede">
             From branding and websites to marketing and growth systems, everything you need to move forward starts right here.
           </p>
-          <a className="abs cta" href="#">
+          <Link className="abs cta" to="/chat">
             <span>Take Control</span>
-          </a>
+          </Link>
         </div>
         <footer className="footer">
           <div className="finner">

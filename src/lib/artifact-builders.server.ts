@@ -131,7 +131,7 @@ export async function buildDocx(doc: RichDoc): Promise<Uint8Array> {
   const levels = [d.HeadingLevel.HEADING_1, d.HeadingLevel.HEADING_2, d.HeadingLevel.HEADING_3];
   let listInstance = 0;
   for (const b of doc.blocks) {
-    if (b.type === "heading") children.push(new d.Paragraph({ text: b.text, heading: levels[b.level - 1] }));
+    if (b.type === "heading") children.push(new d.Paragraph({ text: b.text, heading: levels[b.level - 1] ?? d.HeadingLevel.HEADING_2 }));
     else if (b.type === "paragraph") children.push(new d.Paragraph({ text: b.text, spacing: { after: 160 } }));
     else if (b.type === "bullets") for (const it of b.items) children.push(new d.Paragraph({ text: it, bullet: { level: 0 } }));
     else if (b.type === "numbered") { listInstance++; for (const it of b.items) children.push(new d.Paragraph({ text: it, numbering: { reference: "num", level: 0, instance: listInstance } })); }
@@ -139,7 +139,7 @@ export async function buildDocx(doc: RichDoc): Promise<Uint8Array> {
       const mk = (vals: string[], header: boolean) => new d.TableRow({
         tableHeader: header,
         children: b.headers.map((_, i) => new d.TableCell({
-          shading: header ? { fill: "EDEDED", type: d.ShadingType.CLEAR, color: "auto" } : undefined,
+          ...(header ? { shading: { fill: "EDEDED", type: d.ShadingType.CLEAR, color: "auto" } } : {}),
           children: [new d.Paragraph({ children: [new d.TextRun({ text: vals[i] ?? "", bold: header })] })],
         })),
       });
@@ -153,7 +153,7 @@ export async function buildDocx(doc: RichDoc): Promise<Uint8Array> {
     numbering: { config: [{ reference: "num", levels: [{ level: 0, format: d.LevelFormat.DECIMAL, text: "%1.", alignment: d.AlignmentType.START }] }] },
     sections: [{
       properties: {},
-      footers: doc.footer ? { default: new d.Footer({ children: [new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [new d.TextRun({ text: doc.footer, size: 18, color: "777777" })] })] }) } : undefined,
+      ...(doc.footer ? { footers: { default: new d.Footer({ children: [new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [new d.TextRun({ text: doc.footer, size: 18, color: "777777" })] })] }) } } : {}),
       children,
     }],
   });

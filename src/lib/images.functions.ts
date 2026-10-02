@@ -7,6 +7,7 @@ const BUCKET = "chat-attachments";
 const STALE_MS = 6 * 60_000;
 
 const genSchema = z.object({
+  jobId: z.string().uuid(),
   chatId: z.string().uuid(),
   modelId: z.string().uuid(),
   prompt: z.string().trim().min(1, "Enter a prompt").max(4000),
@@ -59,7 +60,7 @@ export const generateImageJob = createServerFn({ method: "POST" })
     if ((inflight?.length ?? 0) >= 2) throw new Error("You already have images generating. Wait for them to finish.");
 
     const { data: job, error: jErr } = await supabaseAdmin.from("image_generation_jobs").insert({
-      user_id: userId, chat_id: chat.id, connection_id: model.connection_id, model_id: model.id,
+      id: data.jobId, user_id: userId, chat_id: chat.id, connection_id: model.connection_id, model_id: model.id,
       prompt: data.prompt, negative_prompt: negativePrompt, size, aspect_ratio: aspectRatio, quality, style, status: "generating",
     }).select("id").single();
     if (jErr || !job) throw new Error("Couldn't start image generation. Please try again.");

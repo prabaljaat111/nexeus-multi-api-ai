@@ -22,3 +22,4 @@
 - Edit/regenerate (Phase 1) delete the original message(s) client-side under RLS before resending — no branching/version history.
 - Image generation runs in the `generateImageJob` server function (not an edge function) using documented provider contracts in `image-gen.server.ts`; image capability comes only from the exact-id catalog in `image-catalog.ts` — avoids guessing provider support.
 - File (artifact) generation runs in the `generateArtifactJob` server function: the model returns Zod-validated JSON only and files are built by `artifact-builders.server.ts` — model output is never executed.
+- Attachment analysis: text is extracted server-side into `attachment_extractions` (text column not granted to browser roles) and injected only by `/api/chat-completion` via `analysis-context.server.ts` inside delimited untrusted-data blocks — keeps file content from overriding instructions.

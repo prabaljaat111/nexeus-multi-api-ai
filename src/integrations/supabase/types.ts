@@ -114,6 +114,60 @@ export type Database = {
           },
         ]
       }
+      attachment_extractions: {
+        Row: {
+          attachment_id: string
+          created_at: string
+          error_message: string | null
+          extracted_text: string | null
+          extraction_status: string
+          id: string
+          source_map: Json
+          structured_metadata: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attachment_id: string
+          created_at?: string
+          error_message?: string | null
+          extracted_text?: string | null
+          extraction_status: string
+          id?: string
+          source_map?: Json
+          structured_metadata?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attachment_id?: string
+          created_at?: string
+          error_message?: string | null
+          extracted_text?: string | null
+          extraction_status?: string
+          id?: string
+          source_map?: Json
+          structured_metadata?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachment_extractions_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: true
+            referencedRelation: "chat_attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachment_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_attachments: {
         Row: {
           attachment_type: string
@@ -410,6 +464,7 @@ export type Database = {
       messages: {
         Row: {
           chat_id: string
+          citations: Json | null
           client_request_id: string | null
           content: string
           created_at: string
@@ -425,6 +480,7 @@ export type Database = {
         }
         Insert: {
           chat_id: string
+          citations?: Json | null
           client_request_id?: string | null
           content?: string
           created_at?: string
@@ -440,6 +496,7 @@ export type Database = {
         }
         Update: {
           chat_id?: string
+          citations?: Json | null
           client_request_id?: string | null
           content?: string
           created_at?: string
@@ -552,6 +609,70 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tool_runs: {
+        Row: {
+          chat_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          input_summary: Json
+          message_id: string | null
+          output_summary: Json
+          status: string
+          tool_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_summary?: Json
+          message_id?: string | null
+          output_summary?: Json
+          status: string
+          tool_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_summary?: Json
+          message_id?: string | null
+          output_summary?: Json
+          status?: string
+          tool_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_runs_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_runs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tool_runs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

@@ -78,6 +78,13 @@
       "when": 1790969228555,
       "tag": "0010_artifact_generation_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790969524292,
+      "tag": "0011_attachment_analysis",
+      "breakpoints": true
     }
   ]
 }

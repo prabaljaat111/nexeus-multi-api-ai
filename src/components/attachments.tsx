@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertCircle, Download, ExternalLink, File as FileIcon, FileText, Loader2, RotateCcw, Trash2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Sparkles, Download, ExternalLink, File as FileIcon, FileText, Loader2, RotateCcw, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { notify } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { MAX_ATTACHMENT_BYTES, formatBytes, type AttachmentRow } from "@/lib/attachments";
+import { MAX_ATTACHMENT_BYTES, NOT_ANALYZABLE, formatBytes, isAnalyzable, isVisionImage, type AttachmentExtraction, type AttachmentRow } from "@/lib/attachments";
+import { extractAttachmentContent } from "@/lib/analysis.functions";
 import { completeAttachmentUpload, createAttachmentUpload, deleteAttachment, getAttachmentDownloadUrl } from "@/lib/attachments.functions";
 
 export const attachmentKeys = { chat: (chatId: string) => ["attachments", chatId] as const };
@@ -17,10 +18,13 @@ export function useChatAttachments(chatId: string) {
     queryKey: attachmentKeys.chat(chatId),
     queryFn: async (): Promise<AttachmentRow[]> => {
       const { data, error } = await supabase.from("chat_attachments")
-        .select("id, chat_id, message_id, original_filename, mime_type, size_bytes, safe_preview_type, processing_status, attachment_type, created_at")
+        .select("id, chat_id, message_id, original_filename, mime_type, size_bytes, safe_preview_type, processing_status, attachment_type, created_at, attachment_extractions(extraction_status, error_message)")
         .eq("chat_id", chatId).not("message_id", "is", null).order("created_at");
       if (error) throw new Error("Couldn't load attachments.");
-      return data;
+      return data.map(({ attachment_extractions: ex, ...a }) => {
+        const e = (Array.isArray(ex) ? ex[0] : ex) as AttachmentExtraction | null | undefined;
+        return { ...a, extraction: e ?? null };
+      });
     },
   });
 }
@@ -32,6 +36,18 @@ export interface PendingUpload {
   status: "uploading" | "done" | "error";
   error?: string | undefined;
   row?: AttachmentRow;
+  /** AI-analysis state for this pending file. */
+  analysis?: "reading" | "ready" | "image" | "unsupported" | "failed" | undefined;
+  analysisMessage?: string | null | undefined;
+  include?: boolean;
+}
+
+export function useExtract() {
+  const fn = useServerFn(extractAttachmentContent);
+  return useCallback(async (id: string) => {
+    try { return await fn({ data: { attachmentId: id } }); }
+    catch (e) { return { status: "failed" as const, message: e instanceof Error ? e.message : "This file couldn't be analyzed." }; }
+  }, [fn]);
 }
 
 function putWithProgress(url: string, file: File, onProgress: (p: number) => void): Promise<void> {
@@ -52,7 +68,18 @@ export function useAttachmentUploads(chatId: string) {
   const createFn = useServerFn(createAttachmentUpload);
   const completeFn = useServerFn(completeAttachmentUpload);
   const deleteFn = useServerFn(deleteAttachment);
+  const extractFn = useExtract();
   const patch = (key: string, p: Partial<PendingUpload>) => setItems((s) => s.map((i) => (i.key === key ? { ...i, ...p } : i)));
+
+  const analyze = useCallback(async (key: string, row: AttachmentRow) => {
+    if (isVisionImage(row.mime_type)) { patch(key, { analysis: "image", include: true }); return; }
+    if (!isAnalyzable(row.original_filename)) { patch(key, { analysis: "unsupported", analysisMessage: NOT_ANALYZABLE, include: false }); return; }
+    patch(key, { analysis: "reading", include: false });
+    let r = await extractFn(row.id);
+    for (let i = 0; r.status === "processing" && i < 20; i++) { await new Promise((ok) => setTimeout(ok, 1500)); r = await extractFn(row.id); }
+    patch(key, r.status === "complete" ? { analysis: "ready", include: true, analysisMessage: null }
+      : { analysis: r.status === "unsupported" ? "unsupported" : "failed", analysisMessage: r.message, include: false });
+  }, [extractFn]);
 
   const run = useCallback(async (key: string, file: File) => {
     patch(key, { status: "uploading", progress: 0, error: undefined });
@@ -61,10 +88,11 @@ export function useAttachmentUploads(chatId: string) {
       await putWithProgress(uploadUrl, file, (progress) => patch(key, { progress }));
       const row = await completeFn({ data: { path, filename: file.name, mimeType: file.type || null, chatId } });
       patch(key, { status: "done", progress: 100, row });
+      await analyze(key, row);
     } catch (e) {
       patch(key, { status: "error", error: e instanceof Error ? e.message : "Upload failed." });
     }
-  }, [chatId, createFn, completeFn]);
+  }, [chatId, createFn, completeFn, analyze]);
 
   const add = useCallback((files: FileList | File[]) => {
     const list = Array.from(files);
@@ -94,10 +122,14 @@ export function useAttachmentUploads(chatId: string) {
   const addExisting = useCallback((row: AttachmentRow) => {
     const file = new File([], row.original_filename, { type: row.mime_type ?? "" });
     Object.defineProperty(file, "size", { value: row.size_bytes });
-    setItems((s) => [...s, { key: crypto.randomUUID(), file, progress: 100, status: "done", row }]);
-  }, []);
+    const key = crypto.randomUUID();
+    setItems((s) => [...s, { key, file, progress: 100, status: "done", row }]);
+    void analyze(key, row);
+  }, [analyze]);
+  const toggleInclude = useCallback((key: string) => setItems((s) => s.map((i) => (i.key === key ? { ...i, include: !i.include } : i))), []);
+  const reanalyze = useCallback((key: string) => { const it = items.find((i) => i.key === key); if (it?.row) void analyze(key, it.row); }, [items, analyze]);
   useEffect(() => { setItems([]); }, [chatId]);
-  return { items, add, remove, retry, clear, addExisting };
+  return { items, add, remove, retry, clear, addExisting, toggleInclude, reanalyze };
 }
 
 export function useAttachmentUrl() {
@@ -113,7 +145,21 @@ async function openUrl(get: () => Promise<string>, download: boolean) {
   } catch (e) { notify.fromError(e); }
 }
 
-export function PendingChips({ items, onRemove, onRetry }: { items: PendingUpload[]; onRemove: (k: string) => void; onRetry: (k: string) => void }) {
+function analysisLabel(i: PendingUpload, vision: boolean): string | null {
+  switch (i.analysis) {
+    case "reading": return "Reading for AI…";
+    case "ready": return i.include ? "Included for AI" : "Ready for AI (not included)";
+    case "image": return !vision ? "Image · this model can't see images" : i.include ? "Image included for AI" : "Image (not included)";
+    case "unsupported": return "AI analysis not available";
+    case "failed": return i.analysisMessage ?? "Couldn't read for AI";
+    default: return null;
+  }
+}
+
+export function PendingChips({ items, onRemove, onRetry, onToggleInclude, onReanalyze, vision = false }: {
+  items: PendingUpload[]; onRemove: (k: string) => void; onRetry: (k: string) => void;
+  onToggleInclude?: (k: string) => void; onReanalyze?: (k: string) => void; vision?: boolean;
+}) {
   if (!items.length) return null;
   return (
     <ul className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto px-1 pb-2" aria-label="Attachments">
@@ -125,8 +171,20 @@ export function PendingChips({ items, onRemove, onRetry }: { items: PendingUploa
             <div className={cn("truncate text-muted-foreground", i.status === "error" && "text-destructive")}>
               {i.status === "uploading" ? `${i.progress}% · ${formatBytes(i.file.size)}` : i.status === "error" ? i.error : `${formatBytes(i.file.size)} · ${i.file.type || "file"}`}
             </div>
+            {i.status === "done" && analysisLabel(i, vision) && (
+              <div className={cn("truncate", i.analysis === "failed" ? "text-destructive" : i.include && (i.analysis !== "image" || vision) ? "text-primary" : "text-muted-foreground")}
+                title={i.analysisMessage ?? undefined}>{analysisLabel(i, vision)}</div>
+            )}
             {i.status === "uploading" && <div className="mt-0.5 h-0.5 w-full rounded bg-border" role="progressbar" aria-valuenow={i.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Uploading ${i.file.name}`}><div className="h-full rounded bg-primary transition-all" style={{ width: `${i.progress}%` }} /></div>}
           </div>
+          {i.status === "done" && onToggleInclude && (i.analysis === "ready" || (i.analysis === "image" && vision)) && (
+            <Button type="button" size="icon" variant={i.include ? "secondary" : "ghost"} className="size-6" aria-pressed={!!i.include}
+              aria-label={i.include ? `Don't include ${i.file.name} for AI` : `Include ${i.file.name} for AI`} title={i.include ? "Included for AI — click to exclude" : "Include for AI"}
+              onClick={() => onToggleInclude(i.key)}><Sparkles className="size-3" /></Button>
+          )}
+          {i.status === "done" && i.analysis === "failed" && onReanalyze && (
+            <Button type="button" size="icon" variant="ghost" className="size-6" aria-label={`Retry reading ${i.file.name}`} onClick={() => onReanalyze(i.key)}><RotateCcw className="size-3" /></Button>
+          )}
           {i.status === "error" && <Button type="button" size="icon" variant="ghost" className="size-6" aria-label={`Retry ${i.file.name}`} onClick={() => onRetry(i.key)}><RotateCcw className="size-3" /></Button>}
           <Button type="button" size="icon" variant="ghost" className="size-6" aria-label={`Remove ${i.file.name}`} onClick={() => onRemove(i.key)}><X className="size-3" /></Button>
         </li>
@@ -179,8 +237,19 @@ export function AttachmentCard({ a, onDeleted }: { a: AttachmentRow; onDeleted: 
       </div>
       {(p === "image" || p === "audio" || p === "video") && <MediaPreview id={a.id} kind={p} name={a.original_filename} />}
       {(p === "plain_text" || p === "csv") && <TextPreview id={a.id} />}
+      <AnalysisStatus a={a} />
     </div>
   );
+}
+
+export function AnalysisStatus({ a }: { a: AttachmentRow }) {
+  if (isVisionImage(a.mime_type)) return <p className="mt-1 text-[11px] text-muted-foreground">Image · can be sent to vision-capable models</p>;
+  const e: AttachmentExtraction | null | undefined = a.extraction;
+  if (e?.extraction_status === "complete") return <p className="mt-1 flex items-center gap-1 text-[11px] text-primary"><CheckCircle2 className="size-3" />Read for AI analysis</p>;
+  if (e?.extraction_status === "processing" || e?.extraction_status === "queued") return <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><Loader2 className="size-3 animate-spin" />Reading for AI…</p>;
+  if (e?.extraction_status === "failed") return <p className="mt-1 text-[11px] text-destructive">{e.error_message ?? "This file couldn't be read for AI analysis."}</p>;
+  if (e?.extraction_status === "unsupported" || !isAnalyzable(a.original_filename)) return <p className="mt-1 text-[11px] text-muted-foreground">{e?.error_message ?? NOT_ANALYZABLE}</p>;
+  return <p className="mt-1 text-[11px] text-muted-foreground">Not read for AI yet — choose it from Tools → Analyze attachment.</p>;
 }
 
 export function MessageAttachments({ items, onDeleted }: { items: AttachmentRow[]; onDeleted: () => void }) {
@@ -188,7 +257,6 @@ export function MessageAttachments({ items, onDeleted }: { items: AttachmentRow[
   return (
     <div className="mt-1.5 flex w-full flex-col items-end gap-1.5">
       {items.map((a) => <AttachmentCard key={a.id} a={a} onDeleted={onDeleted} />)}
-      <p className="text-[11px] text-muted-foreground">File attached. AI analysis will be available for supported formats.</p>
     </div>
   );
 }

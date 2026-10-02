@@ -26,7 +26,10 @@ export interface ChatMessage {
   created_at: string;
   model_id: string | null;
   model_label: string | null;
+  citations: MessageCitations | null;
 }
+
+export interface MessageCitations { sources: { attachmentId: string; filename: string; label: string | null }[]; truncated: string[] }
 
 export interface SelectableModel {
   id: string;
@@ -36,6 +39,7 @@ export interface SelectableModel {
   connection_name: string;
   provider_type: string;
   scope: "personal" | "global";
+  vision: boolean;
 }
 
 export const chatKeys = {
@@ -64,7 +68,7 @@ export async function getChat(id: string): Promise<ChatDetail | null> {
 
 export async function listMessages(chatId: string): Promise<ChatMessage[]> {
   const { data, error } = await supabase.from("messages")
-    .select("id, role, content, status, error_message, created_at, model_id, models(display_name, connections(name))")
+    .select("id, role, content, status, error_message, created_at, model_id, citations, models(display_name, connections(name))")
     .eq("chat_id", chatId).order("created_at", { ascending: true });
   if (error) throw new Error("Couldn't load messages.");
   return data.map(({ models, ...m }) => {
@@ -109,7 +113,7 @@ export async function listImageModels(): Promise<ImageModel[]> {
     const c = m.connections as { name: string; enabled: boolean; provider_type: string; scope: string } | null;
     return c?.enabled && isImageCaps(m.capabilities) ? [{
       id: m.id, display_name: m.display_name, provider_model_id: m.provider_model_id, connection_id: m.connection_id,
-      connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const, caps: m.capabilities,
+      connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const, caps: m.capabilities, vision: false,
     }] : [];
   });
 }
@@ -121,6 +125,7 @@ export async function listSelectableModels(): Promise<SelectableModel[]> {
     return c?.enabled && !isImageCaps(m.capabilities) ? [{
       id: m.id, display_name: m.display_name, provider_model_id: m.provider_model_id, connection_id: m.connection_id,
       connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const,
+      vision: (m.capabilities as Record<string, unknown> | null)?.["vision"] === true,
     }] : [];
   });
 }

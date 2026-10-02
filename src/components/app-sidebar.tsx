@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
-import { ChevronsUpDown, Cpu, KeyRound, LogOut, Plus, Settings, Shield, UserRound } from "lucide-react";
+import { ChevronsUpDown, Code2, Cpu, KeyRound, LogOut, Plus, Settings, Shield, UserRound } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
@@ -54,6 +54,11 @@ export function AppSidebar({ user, isAdmin }: { user: User; isAdmin: boolean }) 
       </SidebarContent>
       <SidebarFooter className="border-t p-2">
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link to="/build" onClick={closeMobile}><Code2 />Build</Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link to="/settings/connections" onClick={closeMobile}><Settings />Settings</Link>

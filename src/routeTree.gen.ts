@@ -18,9 +18,12 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as ApiChatCompletionRouteImport } from './routes/api/chat-completion'
+import { Route as ApiCodeGenerationRouteImport } from './routes/api/code-generation'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedAdminConnectionsRouteImport } from './routes/_authenticated/admin/connections'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
+import { Route as AuthenticatedBuildIndexRouteImport } from './routes/_authenticated/build/index'
+import { Route as AuthenticatedBuildProjectIdRouteImport } from './routes/_authenticated/build/$projectId'
 import { Route as AuthenticatedChatIndexRouteImport } from './routes/_authenticated/chat/index'
 import { Route as AuthenticatedChatChatIdRouteImport } from './routes/_authenticated/chat/$chatId'
 import { Route as AuthenticatedSettingsConnectionsRouteImport } from './routes/_authenticated/settings/connections'
@@ -71,6 +74,11 @@ const ApiChatCompletionRoute = ApiChatCompletionRouteImport.update({
   path: '/api/chat-completion',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCodeGenerationRoute = ApiCodeGenerationRouteImport.update({
+  id: '/api/code-generation',
+  path: '/api/code-generation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -87,6 +95,17 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedBuildIndexRoute = AuthenticatedBuildIndexRouteImport.update({
+  id: '/build/',
+  path: '/build/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBuildProjectIdRoute =
+  AuthenticatedBuildProjectIdRouteImport.update({
+    id: '/build/$projectId',
+    path: '/build/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedChatIndexRoute = AuthenticatedChatIndexRouteImport.update({
   id: '/chat/',
   path: '/chat/',
@@ -125,13 +144,16 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/api/chat-completion': typeof ApiChatCompletionRoute
+  '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
+  '/build/': typeof AuthenticatedBuildIndexRoute
   '/chat/': typeof AuthenticatedChatIndexRoute
 }
 export interface FileRoutesByTo {
@@ -143,13 +165,16 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/api/chat-completion': typeof ApiChatCompletionRoute
+  '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
+  '/build': typeof AuthenticatedBuildIndexRoute
   '/chat': typeof AuthenticatedChatIndexRoute
 }
 export interface FileRoutesById {
@@ -163,13 +188,16 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/api/chat-completion': typeof ApiChatCompletionRoute
+  '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/_authenticated/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/_authenticated/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/_authenticated/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
+  '/_authenticated/build/': typeof AuthenticatedBuildIndexRoute
   '/_authenticated/chat/': typeof AuthenticatedChatIndexRoute
 }
 export interface FileRouteTypes {
@@ -183,13 +211,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/api/chat-completion'
+    | '/api/code-generation'
     | '/auth/callback'
     | '/admin/connections'
     | '/admin/users'
+    | '/build/$projectId'
     | '/chat/$chatId'
     | '/settings/connections'
     | '/settings/models'
     | '/settings/profile'
+    | '/build/'
     | '/chat/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -201,13 +232,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/api/chat-completion'
+    | '/api/code-generation'
     | '/auth/callback'
     | '/admin/connections'
     | '/admin/users'
+    | '/build/$projectId'
     | '/chat/$chatId'
     | '/settings/connections'
     | '/settings/models'
     | '/settings/profile'
+    | '/build'
     | '/chat'
   id:
     | '__root__'
@@ -220,13 +254,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/admin'
     | '/api/chat-completion'
+    | '/api/code-generation'
     | '/auth/callback'
     | '/_authenticated/admin/connections'
     | '/_authenticated/admin/users'
+    | '/_authenticated/build/$projectId'
     | '/_authenticated/chat/$chatId'
     | '/_authenticated/settings/connections'
     | '/_authenticated/settings/models'
     | '/_authenticated/settings/profile'
+    | '/_authenticated/build/'
     | '/_authenticated/chat/'
   fileRoutesById: FileRoutesById
 }
@@ -239,6 +276,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   ApiChatCompletionRoute: typeof ApiChatCompletionRoute
+  ApiCodeGenerationRoute: typeof ApiCodeGenerationRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
@@ -307,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatCompletionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/code-generation': {
+      id: '/api/code-generation'
+      path: '/api/code-generation'
+      fullPath: '/api/code-generation'
+      preLoaderRoute: typeof ApiCodeGenerationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -327,6 +372,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users'
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/build/': {
+      id: '/_authenticated/build/'
+      path: '/build'
+      fullPath: '/build/'
+      preLoaderRoute: typeof AuthenticatedBuildIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/build/$projectId': {
+      id: '/_authenticated/build/$projectId'
+      path: '/build/$projectId'
+      fullPath: '/build/$projectId'
+      preLoaderRoute: typeof AuthenticatedBuildProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/chat/': {
       id: '/_authenticated/chat/'
@@ -384,19 +443,23 @@ const AuthenticatedAdminRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedBuildProjectIdRoute: typeof AuthenticatedBuildProjectIdRoute
   AuthenticatedChatChatIdRoute: typeof AuthenticatedChatChatIdRoute
   AuthenticatedSettingsConnectionsRoute: typeof AuthenticatedSettingsConnectionsRoute
   AuthenticatedSettingsModelsRoute: typeof AuthenticatedSettingsModelsRoute
   AuthenticatedSettingsProfileRoute: typeof AuthenticatedSettingsProfileRoute
+  AuthenticatedBuildIndexRoute: typeof AuthenticatedBuildIndexRoute
   AuthenticatedChatIndexRoute: typeof AuthenticatedChatIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedBuildProjectIdRoute: AuthenticatedBuildProjectIdRoute,
   AuthenticatedChatChatIdRoute: AuthenticatedChatChatIdRoute,
   AuthenticatedSettingsConnectionsRoute: AuthenticatedSettingsConnectionsRoute,
   AuthenticatedSettingsModelsRoute: AuthenticatedSettingsModelsRoute,
   AuthenticatedSettingsProfileRoute: AuthenticatedSettingsProfileRoute,
+  AuthenticatedBuildIndexRoute: AuthenticatedBuildIndexRoute,
   AuthenticatedChatIndexRoute: AuthenticatedChatIndexRoute,
 }
 
@@ -412,6 +475,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   ApiChatCompletionRoute: ApiChatCompletionRoute,
+  ApiCodeGenerationRoute: ApiCodeGenerationRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport

@@ -13,6 +13,8 @@ import {
   FilePlus2,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { NewProjectDialog } from "@/components/code/new-project-dialog";
+import { Code2 } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/states";
 import { Markdown } from "@/components/markdown";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -154,6 +156,8 @@ function ChatThread() {
             <ModelSelector models={models.data} loading={models.isPending} error={models.isError} onRetry={() => void models.refetch()}
               selected={selectedModel} unavailable={modelUnavailable}
               onChange={(m) => save.mutate({ selected_model_id: m.id, selected_connection_id: m.connection_id }, { onSuccess: () => notify.success(`Model set to ${m.display_name}`) })} />
+            <NewProjectDialog chatId={c.id} modelId={selectedModel?.id ?? null}
+              trigger={<Button size="sm" variant="ghost" className="h-8 px-2 text-xs" aria-label="Build from this chat"><Code2 className="size-4" /><span className="hidden lg:inline">Build</span></Button>} />
             <ChatSettings chat={c} onSave={(p) => save.mutateAsync(p).then(() => { notify.success("Chat settings saved"); })} />
           </div>
         }

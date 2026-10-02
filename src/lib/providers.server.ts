@@ -15,6 +15,10 @@ export interface NormalizedModel {
   display_name: string;
   capabilities: Record<string, unknown>;
   context_window: number | null;
+  /** Only set when the provider's model-list API reports it (never guessed). */
+  max_output_tokens?: number | null;
+  supports_tool_calls?: boolean | null;
+  supports_structured_output?: boolean | null;
 }
 
 const TIMEOUT_MS = 15_000;
@@ -100,7 +104,7 @@ export async function fetchModels(provider: ProviderType, baseUrl: string | null
         if (methods.includes("generateContent")) caps["chat"] = true;
         if (methods.includes("embedContent")) caps["embeddings"] = true;
         if (caps["chat"] && /^gemini-(1\.5|2|3)/.test(id) && !/(tts|embedding|image-generation|aqa)/.test(id)) caps["vision"] = true;
-        out.push({ provider_model_id: id, display_name: str(m["displayName"]) ?? id, capabilities: caps, context_window: posInt(m["inputTokenLimit"]) });
+        out.push({ provider_model_id: id, display_name: str(m["displayName"]) ?? id, capabilities: caps, context_window: posInt(m["inputTokenLimit"]), max_output_tokens: posInt(m["outputTokenLimit"]) });
       }
       token = isObj(body) ? str(body["nextPageToken"]) : null;
       if (!token) break;
@@ -116,10 +120,20 @@ export async function fetchModels(provider: ProviderType, baseUrl: string | null
     const caps: Record<string, unknown> = {};
     if (provider === "openai") { const img = openAiImageCaps(id); if (img) Object.assign(caps, img); else if (openAiVision(id)) { caps["chat"] = true; caps["vision"] = true; } }
     let ctx: number | null = null;
+    let maxOut: number | null = null;
+    let tools: boolean | null = null;
+    let structured: boolean | null = null;
     let name = id;
     if (provider === "openrouter") {
       name = str(m["name"]) ?? id;
       ctx = posInt(m["context_length"]);
+      const tp = m["top_provider"];
+      if (isObj(tp)) maxOut = posInt(tp["max_completion_tokens"]);
+      if (Array.isArray(m["supported_parameters"])) {
+        const sp = m["supported_parameters"] as unknown[];
+        tools = sp.includes("tools");
+        structured = sp.includes("structured_outputs") || sp.includes("response_format");
+      }
       const arch = m["architecture"];
       if (isObj(arch) && Array.isArray(arch["input_modalities"])) {
         const mods = arch["input_modalities"] as unknown[];
@@ -127,7 +141,7 @@ export async function fetchModels(provider: ProviderType, baseUrl: string | null
         if (mods.includes("image")) caps["vision"] = true;
       }
     }
-    return [{ provider_model_id: id, display_name: name, capabilities: caps, context_window: ctx }];
+    return [{ provider_model_id: id, display_name: name, capabilities: caps, context_window: ctx, max_output_tokens: maxOut, supports_tool_calls: tools, supports_structured_output: structured }];
   });
 }
 

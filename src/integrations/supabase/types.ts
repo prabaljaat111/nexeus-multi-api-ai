@@ -301,6 +301,188 @@ export type Database = {
           },
         ]
       }
+      code_change_sets: {
+        Row: {
+          changes: Json
+          created_at: string
+          generation_run_id: string
+          id: string
+          project_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          changes: Json
+          created_at?: string
+          generation_run_id: string
+          id?: string
+          project_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          changes?: Json
+          created_at?: string
+          generation_run_id?: string
+          id?: string
+          project_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_change_sets_generation_run_id_fkey"
+            columns: ["generation_run_id"]
+            isOneToOne: false
+            referencedRelation: "code_generation_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "code_change_sets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "code_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      code_generation_runs: {
+        Row: {
+          chat_id: string | null
+          continuation_count: number
+          created_at: string
+          error_message: string | null
+          finish_reason: string | null
+          id: string
+          instruction: string
+          message_id: string | null
+          model_id: string | null
+          output: string
+          plan: string | null
+          project_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_id?: string | null
+          continuation_count?: number
+          created_at?: string
+          error_message?: string | null
+          finish_reason?: string | null
+          id?: string
+          instruction: string
+          message_id?: string | null
+          model_id?: string | null
+          output?: string
+          plan?: string | null
+          project_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: string | null
+          continuation_count?: number
+          created_at?: string
+          error_message?: string | null
+          finish_reason?: string | null
+          id?: string
+          instruction?: string
+          message_id?: string | null
+          model_id?: string | null
+          output?: string
+          plan?: string | null
+          project_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_generation_runs_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "code_generation_runs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "code_generation_runs_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "code_generation_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "code_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      code_projects: {
+        Row: {
+          chat_id: string | null
+          created_at: string
+          framework: string
+          id: string
+          preview_error: string | null
+          preview_status: string
+          selected_model_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_id?: string | null
+          created_at?: string
+          framework?: string
+          id?: string
+          preview_error?: string | null
+          preview_status?: string
+          selected_model_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: string | null
+          created_at?: string
+          framework?: string
+          id?: string
+          preview_error?: string | null
+          preview_status?: string
+          selected_model_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_projects_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "code_projects_selected_model_id_fkey"
+            columns: ["selected_model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connections: {
         Row: {
           base_url: string | null
@@ -538,8 +720,11 @@ export type Database = {
           fetched_at: string
           id: string
           input_cost_per_million: number | null
+          max_output_tokens: number | null
           output_cost_per_million: number | null
           provider_model_id: string
+          supports_structured_output: boolean | null
+          supports_tool_calls: boolean | null
           updated_at: string
         }
         Insert: {
@@ -552,8 +737,11 @@ export type Database = {
           fetched_at?: string
           id?: string
           input_cost_per_million?: number | null
+          max_output_tokens?: number | null
           output_cost_per_million?: number | null
           provider_model_id: string
+          supports_structured_output?: boolean | null
+          supports_tool_calls?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -566,8 +754,11 @@ export type Database = {
           fetched_at?: string
           id?: string
           input_cost_per_million?: number | null
+          max_output_tokens?: number | null
           output_cost_per_million?: number | null
           provider_model_id?: string
+          supports_structured_output?: boolean | null
+          supports_tool_calls?: boolean | null
           updated_at?: string
         }
         Relationships: [
@@ -609,6 +800,101 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_file_versions: {
+        Row: {
+          change_source: string
+          change_summary: string | null
+          content: string
+          created_at: string
+          id: string
+          project_file_id: string
+          project_id: string
+          version_number: number
+        }
+        Insert: {
+          change_source: string
+          change_summary?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          project_file_id: string
+          project_id: string
+          version_number: number
+        }
+        Update: {
+          change_source?: string
+          change_summary?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          project_file_id?: string
+          project_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_file_versions_project_file_id_fkey"
+            columns: ["project_file_id"]
+            isOneToOne: false
+            referencedRelation: "project_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_file_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "code_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_files: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          file_type: string
+          id: string
+          is_entry_file: boolean
+          language: string | null
+          path: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          created_by: string
+          file_type?: string
+          id?: string
+          is_entry_file?: boolean
+          language?: string | null
+          path: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          file_type?: string
+          id?: string
+          is_entry_file?: boolean
+          language?: string | null
+          path?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "code_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tool_runs: {
         Row: {
@@ -730,6 +1016,7 @@ export type Database = {
       is_active_approved_user: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       owns_chat: { Args: { _chat_id: string }; Returns: boolean }
+      owns_code_project: { Args: { _project_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -23,6 +23,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedAdminConnectionsRouteImport } from './routes/_authenticated/admin/connections'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
 import { Route as AuthenticatedBuildIndexRouteImport } from './routes/_authenticated/build/index'
+import { Route as AuthenticatedBuildProjectIdRouteImport } from './routes/_authenticated/build/$projectId'
 import { Route as AuthenticatedChatIndexRouteImport } from './routes/_authenticated/chat/index'
 import { Route as AuthenticatedChatChatIdRouteImport } from './routes/_authenticated/chat/$chatId'
 import { Route as AuthenticatedSettingsConnectionsRouteImport } from './routes/_authenticated/settings/connections'
@@ -99,6 +100,12 @@ const AuthenticatedBuildIndexRoute = AuthenticatedBuildIndexRouteImport.update({
   path: '/build/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedBuildProjectIdRoute =
+  AuthenticatedBuildProjectIdRouteImport.update({
+    id: '/build/$projectId',
+    path: '/build/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedChatIndexRoute = AuthenticatedChatIndexRouteImport.update({
   id: '/chat/',
   path: '/chat/',
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/settings/models': typeof AuthenticatedSettingsModelsRoute
@@ -161,6 +169,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/settings/models': typeof AuthenticatedSettingsModelsRoute
@@ -183,6 +192,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/_authenticated/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/_authenticated/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/_authenticated/settings/models': typeof AuthenticatedSettingsModelsRoute
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/admin/connections'
     | '/admin/users'
+    | '/build/$projectId'
     | '/chat/$chatId'
     | '/settings/connections'
     | '/settings/models'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/admin/connections'
     | '/admin/users'
+    | '/build/$projectId'
     | '/chat/$chatId'
     | '/settings/connections'
     | '/settings/models'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/_authenticated/admin/connections'
     | '/_authenticated/admin/users'
+    | '/_authenticated/build/$projectId'
     | '/_authenticated/chat/$chatId'
     | '/_authenticated/settings/connections'
     | '/_authenticated/settings/models'
@@ -367,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBuildIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/build/$projectId': {
+      id: '/_authenticated/build/$projectId'
+      path: '/build/$projectId'
+      fullPath: '/build/$projectId'
+      preLoaderRoute: typeof AuthenticatedBuildProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/chat/': {
       id: '/_authenticated/chat/'
       path: '/chat'
@@ -423,6 +443,7 @@ const AuthenticatedAdminRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedBuildProjectIdRoute: typeof AuthenticatedBuildProjectIdRoute
   AuthenticatedChatChatIdRoute: typeof AuthenticatedChatChatIdRoute
   AuthenticatedSettingsConnectionsRoute: typeof AuthenticatedSettingsConnectionsRoute
   AuthenticatedSettingsModelsRoute: typeof AuthenticatedSettingsModelsRoute
@@ -433,6 +454,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedBuildProjectIdRoute: AuthenticatedBuildProjectIdRoute,
   AuthenticatedChatChatIdRoute: AuthenticatedChatChatIdRoute,
   AuthenticatedSettingsConnectionsRoute: AuthenticatedSettingsConnectionsRoute,
   AuthenticatedSettingsModelsRoute: AuthenticatedSettingsModelsRoute,

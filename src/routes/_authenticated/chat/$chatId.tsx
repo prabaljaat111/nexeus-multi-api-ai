@@ -351,7 +351,7 @@ function ActionButton({ label, onClick, children }: { label: string; onClick: ()
 const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachments, onAttachmentsChanged }: {
   message: ChatMessage; canAct: boolean; isEditing: boolean; canRegenerate: boolean; canEdit: boolean;
   onRegenerate: () => void; onEdit: () => void; onCancelEdit: () => void; onSubmitEdit: (t: string) => void; onDelete: () => Promise<void>;
-  attachments?: AttachmentRow[]; onAttachmentsChanged: () => void;
+  attachments?: AttachmentRow[] | undefined; onAttachmentsChanged: () => void;
 }) {
   const isUser = m.role === "user";
   const [draft, setDraft] = useState(m.content);

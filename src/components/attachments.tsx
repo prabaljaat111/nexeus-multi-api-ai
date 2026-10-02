@@ -30,7 +30,7 @@ export interface PendingUpload {
   file: File;
   progress: number;
   status: "uploading" | "done" | "error";
-  error?: string;
+  error?: string | undefined;
   row?: AttachmentRow;
 }
 

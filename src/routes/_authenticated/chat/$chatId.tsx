@@ -47,7 +47,6 @@ function ChatThread() {
   const messages = useQuery({ queryKey: chatKeys.messages(chatId), queryFn: () => listMessages(chatId), enabled: !!chat.data });
   const models = useQuery({ queryKey: chatKeys.selectableModels, queryFn: listSelectableModels });
   const [editing, setEditing] = useState<ChatMessage | null>(null);
-  const [toDelete, setToDelete] = useState<ChatMessage | null>(null);
 
   const save = useMutation({
     mutationFn: (patch: ChatPatch) => updateChat(chatId, patch),
@@ -132,12 +131,9 @@ function ChatThread() {
       <MessageList query={messages} hasModels={(models.data?.length ?? 0) > 0} stream={stream.state} canAct={!!selectedModel && !stream.busy}
         editingId={editing?.id ?? null}
         onRegenerate={(a) => void regenerate(a)} onEdit={setEditing} onCancelEdit={() => setEditing(null)}
-        onSubmitEdit={(m, t) => void resendEdited(m, t)} onDelete={setToDelete} />
+        onSubmitEdit={(m, t) => void resendEdited(m, t)} onDelete={(m) => removeMsg.mutateAsync(m.id).then(() => undefined, () => undefined)} />
       <Composer disabled={!selectedModel} busy={stream.busy} onStop={stream.stop}
         onSend={(text) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text }); }} hint={hint} />
-      <ConfirmDialog open={!!toDelete} onOpenChange={(o) => { if (!o) setToDelete(null); }} title="Delete this message?"
-        description="The message will be permanently removed from this chat." confirmLabel="Delete" destructive
-        onConfirm={() => { if (toDelete) removeMsg.mutate(toDelete.id); setToDelete(null); }} />
     </div>
   );
 }
@@ -253,7 +249,7 @@ function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate
   query: { isPending: boolean; isError: boolean; data: ChatMessage[] | undefined; refetch: () => unknown };
   hasModels: boolean; stream: StreamState; canAct: boolean; editingId: string | null;
   onRegenerate: (lastAssistant: ChatMessage | null) => void; onEdit: (m: ChatMessage) => void; onCancelEdit: () => void;
-  onSubmitEdit: (m: ChatMessage, text: string) => void; onDelete: (m: ChatMessage) => void;
+  onSubmitEdit: (m: ChatMessage, text: string) => void; onDelete: (m: ChatMessage) => Promise<void>;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -341,7 +337,7 @@ function ActionButton({ label, onClick, children }: { label: string; onClick: ()
 
 function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete }: {
   message: ChatMessage; canAct: boolean; isEditing: boolean; canRegenerate: boolean; canEdit: boolean;
-  onRegenerate: () => void; onEdit: () => void; onCancelEdit: () => void; onSubmitEdit: (t: string) => void; onDelete: () => void;
+  onRegenerate: () => void; onEdit: () => void; onCancelEdit: () => void; onSubmitEdit: (t: string) => void; onDelete: () => Promise<void>;
 }) {
   const isUser = m.role === "user";
   const [draft, setDraft] = useState(m.content);
@@ -378,7 +374,11 @@ function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegen
         {m.content && <CopyButton text={m.content} />}
         {canEdit && <ActionButton label="Edit message" onClick={onEdit}><Pencil className="size-3.5" /></ActionButton>}
         {canRegenerate && <ActionButton label="Regenerate response" onClick={onRegenerate}><RotateCcw className="size-3.5" /></ActionButton>}
-        {canAct && <ActionButton label="Delete message" onClick={onDelete}><Trash2 className="size-3.5" /></ActionButton>}
+        {canAct && (
+          <ConfirmDialog title="Delete this message?" description="The message will be permanently removed from this chat." confirmLabel="Delete" destructive
+            onConfirm={onDelete}
+            trigger={<Button type="button" size="icon" variant="ghost" className="size-7 text-muted-foreground" aria-label="Delete message" title="Delete message"><Trash2 className="size-3.5" /></Button>} />
+        )}
       </div>
     </div>
   );

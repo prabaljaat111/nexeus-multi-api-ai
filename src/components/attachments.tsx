@@ -17,7 +17,7 @@ export function useChatAttachments(chatId: string) {
     queryKey: attachmentKeys.chat(chatId),
     queryFn: async (): Promise<AttachmentRow[]> => {
       const { data, error } = await supabase.from("chat_attachments")
-        .select("id, chat_id, message_id, original_filename, mime_type, size_bytes, safe_preview_type, processing_status, created_at")
+        .select("id, chat_id, message_id, original_filename, mime_type, size_bytes, safe_preview_type, processing_status, attachment_type, created_at")
         .eq("chat_id", chatId).not("message_id", "is", null).order("created_at");
       if (error) throw new Error("Couldn't load attachments.");
       return data;

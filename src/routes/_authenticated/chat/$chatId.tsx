@@ -4,8 +4,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { attachmentKeys, MessageAttachments, PendingChips, useAttachmentUploads, useChatAttachments, useDropZone } from "@/components/attachments";
 import type { AttachmentRow } from "@/lib/attachments";
+import { GeneratedImageCard, ImageDialog, ImageProgress, jobToOptions, listImageJobs, useImageGeneration, type ImageJobRow, type ImageOptions } from "@/components/image-generation";
 import {
-  AlertCircle, AlertTriangle, ArrowDown, Bot, Check, ChevronsUpDown, Copy, Loader2, Paperclip, Pencil, RotateCcw, SearchX, SendHorizontal,
+  AlertCircle, AlertTriangle, ArrowDown, Bot, Check, ChevronsUpDown, Copy, ImageIcon, Loader2, Paperclip, Pencil, RotateCcw, SearchX, SendHorizontal,
   SlidersHorizontal, Square, Trash2,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -24,7 +25,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { notify } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import {
-  chatKeys, deleteMessage, deleteMessagesFrom, getChat, listMessages, listSelectableModels, updateChat,
+  chatKeys, deleteMessage, deleteMessagesFrom, getChat, listImageModels, listMessages, listSelectableModels, updateChat,
   type ChatDetail, type ChatMessage, type ChatPatch, type SelectableModel,
 } from "@/lib/chats";
 
@@ -63,7 +64,17 @@ function ChatThread() {
     return map;
   }, [attachments.data]);
   const refreshAttachments = useCallback(() => { void qc.invalidateQueries({ queryKey: attachmentKeys.chat(chatId) }); }, [qc, chatId]);
+  const imageModels = useQuery({ queryKey: chatKeys.imageModels, queryFn: listImageModels });
+  const imageJobs = useQuery({ queryKey: chatKeys.imageJobs(chatId), queryFn: () => listImageJobs(chatId) });
+  const jobsByMessage = useMemo(() => {
+    const map = new Map<string, ImageJobRow>();
+    (imageJobs.data ?? []).forEach((j) => { if (j.message_id) map.set(j.message_id, j); });
+    return map;
+  }, [imageJobs.data]);
+  const [imageDialog, setImageDialog] = useState<{ initial: Partial<ImageOptions> | null } | null>(null);
+  const openImageDialog = useCallback((initial: Partial<ImageOptions> | null) => setImageDialog({ initial }), []);
   const refresh = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: chatKeys.imageJobs(chatId) });
     void qc.invalidateQueries({ queryKey: chatKeys.messages(chatId) });
     void qc.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
     void qc.invalidateQueries({ queryKey: chatKeys.list });
@@ -71,6 +82,7 @@ function ChatThread() {
   }, [qc, chatId]);
   const onStreamError = useCallback((m: string) => notify.error(m), []);
   const stream = useChatStream(refresh, onStreamError);
+  const images = useImageGeneration(chatId, refresh);
 
   const removeMsg = useMutation({
     mutationFn: (id: string) => deleteMessage(id),
@@ -142,8 +154,14 @@ function ChatThread() {
         editingId={editing?.id ?? null}
         onRegenerate={(a) => void regenerate(a)} onEdit={setEditing} onCancelEdit={() => setEditing(null)}
         onSubmitEdit={(m, t) => void resendEdited(m, t)} onDelete={(m) => removeMsg.mutateAsync(m.id).then(() => undefined, () => undefined)}
-        attachmentsByMessage={attachmentsByMessage} onAttachmentsChanged={refreshAttachments} />
+        attachmentsByMessage={attachmentsByMessage} onAttachmentsChanged={refresh}
+        jobsByMessage={jobsByMessage} canGenerateImage={!images.pending && !stream.busy}
+        onImageVariation={(j) => openImageDialog(jobToOptions(j))}
+        imageProgress={images.pending ? <ImageProgress prompt={images.pending.prompt} cancelling={images.pending.cancelling} onCancel={() => void images.cancel()} /> : null} />
+      <ImageDialog open={!!imageDialog} onOpenChange={(o) => { if (!o) setImageDialog(null); }} models={imageModels.data} initial={imageDialog?.initial ?? null}
+        onSubmit={(o) => void images.generate(o)} />
       <Composer chatId={chatId} disabled={!selectedModel} busy={stream.busy} onStop={stream.stop}
+        imageBusy={!!images.pending} onImage={(prompt) => openImageDialog(prompt ? { prompt } : null)}
         onSend={(text, attachmentIds) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text, attachmentIds }); }} hint={hint} />
     </div>
   );
@@ -256,12 +274,13 @@ function ChatSettings({ chat, onSave }: { chat: ChatDetail; onSave: (p: ChatPatc
   );
 }
 
-function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachmentsByMessage, onAttachmentsChanged }: {
+function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachmentsByMessage, onAttachmentsChanged, jobsByMessage, canGenerateImage, onImageVariation, imageProgress }: {
   query: { isPending: boolean; isError: boolean; data: ChatMessage[] | undefined; refetch: () => unknown };
   hasModels: boolean; stream: StreamState; canAct: boolean; editingId: string | null;
   onRegenerate: (lastAssistant: ChatMessage | null) => void; onEdit: (m: ChatMessage) => void; onCancelEdit: () => void;
   onSubmitEdit: (m: ChatMessage, text: string) => void; onDelete: (m: ChatMessage) => Promise<void>;
   attachmentsByMessage: Map<string, AttachmentRow[]>; onAttachmentsChanged: () => void;
+  jobsByMessage: Map<string, ImageJobRow>; canGenerateImage: boolean; onImageVariation: (j: ImageJobRow) => void; imageProgress: React.ReactNode;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -275,14 +294,14 @@ function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate
   };
   const toBottom = (smooth = false) => { const el = scroller.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" }); };
   useEffect(() => { if (stream.status === "submitted") stick.current = true; }, [stream.status]);
-  useEffect(() => { if (stick.current) toBottom(); }, [query.data, stream.text, stream.status, stream.pendingUserText]);
+  useEffect(() => { if (stick.current) toBottom(); }, [query.data, stream.text, stream.status, stream.pendingUserText, imageProgress]);
 
   let content: React.ReactNode;
   const streaming = stream.status !== "idle";
   const items = (query.data ?? []).filter((m) => m.role !== "system" && !(streaming && m.status === "streaming"));
   if (query.isPending) content = <div className="mx-auto max-w-3xl space-y-3 p-6"><Skeleton className="h-16 w-2/3" /><Skeleton className="ml-auto h-12 w-1/2" /><Skeleton className="h-24 w-3/4" /></div>;
   else if (query.isError) content = <ErrorState message="Couldn't load messages." onRetry={() => void query.refetch()} />;
-  else if (items.length === 0 && !streaming) {
+  else if (items.length === 0 && !streaming && !imageProgress) {
     content = (
       <EmptyState icon={Bot} title="No messages yet"
         description={hasModels ? "Pick a model from the top bar and send a message." : "Add a provider in Settings → Connections, then click “Fetch models” to choose a model."}
@@ -302,8 +321,10 @@ function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate
             canEdit={canAct && !streaming && m.role === "user" && m.id === lastUserId}
             onRegenerate={() => onRegenerate(m)} onEdit={() => onEdit(m)} onCancelEdit={onCancelEdit}
             onSubmitEdit={(t) => onSubmitEdit(m, t)} onDelete={() => onDelete(m)}
-            attachments={attachmentsByMessage.get(m.id)} onAttachmentsChanged={onAttachmentsChanged} />
+            attachments={attachmentsByMessage.get(m.id)} onAttachmentsChanged={onAttachmentsChanged}
+            imageJob={jobsByMessage.get(m.id)} canGenerateImage={canGenerateImage} onImageVariation={onImageVariation} />
         ))}
+        {imageProgress}
         {streaming && stream.pendingUserText && <StaticBubble role="user" content={stream.pendingUserText} />}
         {streaming && (stream.text
           ? <StaticBubble role="assistant" content={stream.text} />
@@ -348,11 +369,14 @@ function ActionButton({ label, onClick, children }: { label: string; onClick: ()
   return <Button type="button" size="icon" variant="ghost" className="size-7 text-muted-foreground" aria-label={label} title={label} onClick={onClick}>{children}</Button>;
 }
 
-const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachments, onAttachmentsChanged }: {
+const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachments, onAttachmentsChanged, imageJob, canGenerateImage, onImageVariation }: {
   message: ChatMessage; canAct: boolean; isEditing: boolean; canRegenerate: boolean; canEdit: boolean;
   onRegenerate: () => void; onEdit: () => void; onCancelEdit: () => void; onSubmitEdit: (t: string) => void; onDelete: () => Promise<void>;
   attachments?: AttachmentRow[] | undefined; onAttachmentsChanged: () => void;
+  imageJob?: ImageJobRow | undefined; canGenerateImage: boolean; onImageVariation: (j: ImageJobRow) => void;
 }) {
+  const generated = (attachments ?? []).filter((a) => a.attachment_type === "generated_image");
+  const uploads = (attachments ?? []).filter((a) => a.attachment_type !== "generated_image");
   const isUser = m.role === "user";
   const [draft, setDraft] = useState(m.content);
   useEffect(() => { if (isEditing) setDraft(m.content); }, [isEditing, m.content]);
@@ -382,7 +406,12 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
         {m.status === "error" && <p className="mt-2 flex items-center gap-1.5 text-xs text-destructive"><AlertCircle className="size-3.5" />{m.error_message ?? "This response failed."}</p>}
         {m.status === "stopped" && <p className="mt-2 text-xs italic text-muted-foreground">Response stopped.</p>}
       </div>
-      {attachments && attachments.length > 0 && <div className="max-w-[85%]"><MessageAttachments items={attachments} onDeleted={onAttachmentsChanged} /></div>}
+      {generated.map((a) => (
+        <div key={a.id} className="mt-2 w-full max-w-md">
+          <GeneratedImageCard a={a} job={imageJob} canRegenerate={canGenerateImage} onRegenerate={onImageVariation} onDeleted={onAttachmentsChanged} />
+        </div>
+      ))}
+      {uploads.length > 0 && <div className="max-w-[85%]"><MessageAttachments items={uploads} onDeleted={onAttachmentsChanged} /></div>}
       <div className={cn("mt-1 flex flex-wrap items-center gap-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100",
         (canRegenerate && m.status !== "complete") && "sm:opacity-100")}>
         {!isUser && m.model_label && <span className="mr-1 text-xs text-muted-foreground">{m.model_label}</span>}
@@ -399,7 +428,10 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
   );
 });
 
-function Composer({ chatId, disabled, busy, hint, onSend, onStop }: { chatId: string; disabled: boolean; busy: boolean; hint: string; onSend: (text: string, attachmentIds: string[]) => void; onStop: () => void }) {
+function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, imageBusy }: {
+  chatId: string; disabled: boolean; busy: boolean; hint: string; onSend: (text: string, attachmentIds: string[]) => void; onStop: () => void;
+  onImage: (prompt: string) => void; imageBusy: boolean;
+}) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -416,6 +448,9 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop }: { chatId: st
   }, [text]);
   const canSend = !disabled && !busy && !uploading && !failed && (!!text.trim() || ready.length > 0);
   const submit = () => {
+    // Explicit "/image <prompt>" opens the same secure image flow (never inferred from ordinary text).
+    const slash = text.trim().match(/^\/image(?:\s+([\s\S]*))?$/i);
+    if (slash) { if (!imageBusy) { onImage((slash[1] ?? "").trim()); setText(""); } return; }
     if (!canSend) return;
     let t = text.trim();
     if (t.length > 32_000) { notify.error("Your message is too long (max 32,000 characters)."); return; }
@@ -433,6 +468,7 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop }: { chatId: st
           <div className="flex items-end gap-2">
             <input ref={fileRef} type="file" multiple hidden onChange={(e) => { if (e.target.files) uploads.add(e.target.files); e.target.value = ""; }} />
             <Button type="button" size="icon" variant="ghost" disabled={disabled} onClick={() => fileRef.current?.click()} aria-label="Attach files" title="Attach files"><Paperclip className="size-4" /></Button>
+            <Button type="button" size="icon" variant="ghost" disabled={imageBusy} onClick={() => onImage("")} aria-label="Generate image" title="Generate image (or type /image)"><ImageIcon className="size-4" /></Button>
             <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} rows={1}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
               placeholder={disabled ? "Select a model to start" : "Message…"} aria-label="Message"
@@ -440,7 +476,7 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop }: { chatId: st
             {busy ? (
               <Button type="button" size="icon" variant="secondary" onClick={onStop} aria-label="Stop response"><Square className="size-4" /></Button>
             ) : (
-              <Button type="submit" size="icon" disabled={!canSend} aria-label="Send"><SendHorizontal className="size-4" /></Button>
+              <Button type="submit" size="icon" disabled={!canSend && !/^\/image\b/i.test(text.trim())} aria-label="Send"><SendHorizontal className="size-4" /></Button>
             )}
           </div>
         </div>

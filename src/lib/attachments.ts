@@ -11,6 +11,7 @@ export interface AttachmentRow {
   size_bytes: number;
   safe_preview_type: string | null;
   processing_status: string;
+  attachment_type?: string;
   created_at: string;
 }
 

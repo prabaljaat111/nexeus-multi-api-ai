@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { attachmentKeys, MessageAttachments, PendingChips, useAttachmentUploads, useChatAttachments, useDropZone } from "@/components/attachments";
 import type { AttachmentRow } from "@/lib/attachments";
+import { ArtifactDialog, ArtifactProgress, GeneratedFileCard, artifactJobToOptions, listArtifactJobs, useArtifactGeneration, type ArtifactFormat, type ArtifactJobRow, type ArtifactOptions } from "@/components/artifact-generation";
 import { GeneratedImageCard, ImageDialog, ImageProgress, jobToOptions, listImageJobs, useImageGeneration, type ImageJobRow, type ImageOptions } from "@/components/image-generation";
 import {
   AlertCircle, AlertTriangle, ArrowDown, Bot, Check, ChevronsUpDown, Copy, ImageIcon, Loader2, Paperclip, Pencil, RotateCcw, SearchX, SendHorizontal,
@@ -72,7 +73,16 @@ function ChatThread() {
   }, [imageJobs.data]);
   const [imageDialog, setImageDialog] = useState<{ initial: Partial<ImageOptions> | null } | null>(null);
   const openImageDialog = useCallback((initial: Partial<ImageOptions> | null) => setImageDialog({ initial }), []);
+  const artifactJobs = useQuery({ queryKey: ["artifactJobs", chatId], queryFn: () => listArtifactJobs(chatId) });
+  const artifactsByMessage = useMemo(() => {
+    const map = new Map<string, ArtifactJobRow>();
+    (artifactJobs.data ?? []).forEach((j) => { if (j.output_message_id) map.set(j.output_message_id, j); });
+    return map;
+  }, [artifactJobs.data]);
+  const [artifactDialog, setArtifactDialog] = useState<{ initial: Partial<ArtifactOptions> | null } | null>(null);
+  const [attachRequest, setAttachRequest] = useState<{ row: AttachmentRow; n: number } | null>(null);
   const refresh = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: ["artifactJobs", chatId] });
     void qc.invalidateQueries({ queryKey: chatKeys.imageJobs(chatId) });
     void qc.invalidateQueries({ queryKey: chatKeys.messages(chatId) });
     void qc.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
@@ -82,6 +92,8 @@ function ChatThread() {
   const onStreamError = useCallback((m: string) => notify.error(m), []);
   const stream = useChatStream(refresh, onStreamError);
   const images = useImageGeneration(chatId, refresh);
+  const selectedId = chat.data?.selected_model_id && models.data?.some((m) => m.id === chat.data?.selected_model_id) ? chat.data.selected_model_id : null;
+  const artifacts = useArtifactGeneration(chatId, selectedId, refresh);
 
   const removeMsg = useMutation({
     mutationFn: (id: string) => deleteMessage(id),
@@ -156,10 +168,20 @@ function ChatThread() {
         attachmentsByMessage={attachmentsByMessage} onAttachmentsChanged={refresh}
         jobsByMessage={jobsByMessage} canGenerateImage={!images.pending && !stream.busy}
         onImageVariation={(j) => openImageDialog(jobToOptions(j))}
-        imageProgress={images.pending ? <ImageProgress prompt={images.pending.prompt} cancelling={images.pending.cancelling} onCancel={() => void images.cancel()} /> : null} />
+        artifactsByMessage={artifactsByMessage} canGenerateFile={!artifacts.pending && !stream.busy && !!selectedModel}
+        onFileRegenerate={(j) => setArtifactDialog({ initial: artifactJobToOptions(j) })}
+        onAttachFile={(row) => setAttachRequest((p) => ({ row, n: (p?.n ?? 0) + 1 }))}
+        imageProgress={images.pending || artifacts.pending ? <>
+          {images.pending && <ImageProgress prompt={images.pending.prompt} cancelling={images.pending.cancelling} onCancel={() => void images.cancel()} />}
+          {artifacts.pending && <ArtifactProgress format={artifacts.pending.format} cancelling={artifacts.pending.cancelling} onCancel={() => void artifacts.cancel()} />}
+        </> : null} />
+      <ArtifactDialog open={!!artifactDialog} onOpenChange={(o) => { if (!o) setArtifactDialog(null); }} initial={artifactDialog?.initial ?? null}
+        messages={messages.data} hasModel={!!selectedModel} onSubmit={(o) => void artifacts.generate(o)} />
       <ImageDialog open={!!imageDialog} onOpenChange={(o) => { if (!o) setImageDialog(null); }} models={imageModels.data} initial={imageDialog?.initial ?? null}
         onSubmit={(o) => void images.generate(o)} />
       <Composer chatId={chatId} disabled={!selectedModel} busy={stream.busy} onStop={stream.stop}
+        fileBusy={!!artifacts.pending} onFile={(format, instruction) => setArtifactDialog({ initial: format ? { format, ...(instruction ? { instruction } : {}) } : null })}
+        attachRequest={attachRequest}
         imageBusy={!!images.pending} onImage={(prompt) => openImageDialog(prompt ? { prompt } : null)}
         onSend={(text, attachmentIds) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text, attachmentIds }); }} hint={hint} />
     </div>
@@ -273,13 +295,14 @@ function ChatSettings({ chat, onSave }: { chat: ChatDetail; onSave: (p: ChatPatc
   );
 }
 
-function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachmentsByMessage, onAttachmentsChanged, jobsByMessage, canGenerateImage, onImageVariation, imageProgress }: {
+function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachmentsByMessage, onAttachmentsChanged, jobsByMessage, canGenerateImage, onImageVariation, imageProgress, artifactsByMessage, canGenerateFile, onFileRegenerate, onAttachFile }: {
   query: { isPending: boolean; isError: boolean; data: ChatMessage[] | undefined; refetch: () => unknown };
   hasModels: boolean; stream: StreamState; canAct: boolean; editingId: string | null;
   onRegenerate: (lastAssistant: ChatMessage | null) => void; onEdit: (m: ChatMessage) => void; onCancelEdit: () => void;
   onSubmitEdit: (m: ChatMessage, text: string) => void; onDelete: (m: ChatMessage) => Promise<void>;
   attachmentsByMessage: Map<string, AttachmentRow[]>; onAttachmentsChanged: () => void;
   jobsByMessage: Map<string, ImageJobRow>; canGenerateImage: boolean; onImageVariation: (j: ImageJobRow) => void; imageProgress: React.ReactNode;
+  artifactsByMessage: Map<string, ArtifactJobRow>; canGenerateFile: boolean; onFileRegenerate: (j: ArtifactJobRow) => void; onAttachFile: (row: AttachmentRow) => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -321,7 +344,8 @@ function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate
             onRegenerate={() => onRegenerate(m)} onEdit={() => onEdit(m)} onCancelEdit={onCancelEdit}
             onSubmitEdit={(t) => onSubmitEdit(m, t)} onDelete={() => onDelete(m)}
             attachments={attachmentsByMessage.get(m.id)} onAttachmentsChanged={onAttachmentsChanged}
-            imageJob={jobsByMessage.get(m.id)} canGenerateImage={canGenerateImage} onImageVariation={onImageVariation} />
+            imageJob={jobsByMessage.get(m.id)} canGenerateImage={canGenerateImage} onImageVariation={onImageVariation}
+            artifactJob={artifactsByMessage.get(m.id)} canGenerateFile={canGenerateFile} onFileRegenerate={onFileRegenerate} onAttachFile={onAttachFile} />
         ))}
         {imageProgress}
         {streaming && stream.pendingUserText && <StaticBubble role="user" content={stream.pendingUserText} />}
@@ -368,14 +392,16 @@ function ActionButton({ label, onClick, children }: { label: string; onClick: ()
   return <Button type="button" size="icon" variant="ghost" className="size-7 text-muted-foreground" aria-label={label} title={label} onClick={onClick}>{children}</Button>;
 }
 
-const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachments, onAttachmentsChanged, imageJob, canGenerateImage, onImageVariation }: {
+const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachments, onAttachmentsChanged, imageJob, canGenerateImage, onImageVariation, artifactJob, canGenerateFile, onFileRegenerate, onAttachFile }: {
   message: ChatMessage; canAct: boolean; isEditing: boolean; canRegenerate: boolean; canEdit: boolean;
   onRegenerate: () => void; onEdit: () => void; onCancelEdit: () => void; onSubmitEdit: (t: string) => void; onDelete: () => Promise<void>;
   attachments?: AttachmentRow[] | undefined; onAttachmentsChanged: () => void;
   imageJob?: ImageJobRow | undefined; canGenerateImage: boolean; onImageVariation: (j: ImageJobRow) => void;
+  artifactJob?: ArtifactJobRow | undefined; canGenerateFile: boolean; onFileRegenerate: (j: ArtifactJobRow) => void; onAttachFile: (row: AttachmentRow) => void;
 }) {
   const generated = (attachments ?? []).filter((a) => a.attachment_type === "generated_image");
-  const uploads = (attachments ?? []).filter((a) => a.attachment_type !== "generated_image");
+  const docs = (attachments ?? []).filter((a) => a.attachment_type === "generated_document");
+  const uploads = (attachments ?? []).filter((a) => a.attachment_type !== "generated_image" && a.attachment_type !== "generated_document");
   const isUser = m.role === "user";
   const [draft, setDraft] = useState(m.content);
   useEffect(() => { if (isEditing) setDraft(m.content); }, [isEditing, m.content]);
@@ -410,6 +436,11 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
           <GeneratedImageCard a={a} job={imageJob} canRegenerate={canGenerateImage} onRegenerate={onImageVariation} onDeleted={onAttachmentsChanged} />
         </div>
       ))}
+      {docs.map((a) => (
+        <div key={a.id} className="mt-2 w-full max-w-md">
+          <GeneratedFileCard a={a} job={artifactJob} canRegenerate={canGenerateFile} onRegenerate={onFileRegenerate} onDeleted={onAttachmentsChanged} onAttach={onAttachFile} />
+        </div>
+      ))}
       {uploads.length > 0 && <div className="max-w-[85%]"><MessageAttachments items={uploads} onDeleted={onAttachmentsChanged} /></div>}
       <div className={cn("mt-1 flex flex-wrap items-center gap-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100",
         (canRegenerate && m.status !== "complete") && "sm:opacity-100")}>
@@ -427,9 +458,10 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
   );
 });
 
-function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, imageBusy }: {
+function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, imageBusy, onFile, fileBusy, attachRequest }: {
   chatId: string; disabled: boolean; busy: boolean; hint: string; onSend: (text: string, attachmentIds: string[]) => void; onStop: () => void;
   onImage: (prompt: string) => void; imageBusy: boolean;
+  onFile: (format: ArtifactFormat | null, instruction: string) => void; fileBusy: boolean; attachRequest: { row: AttachmentRow; n: number } | null;
 }) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -438,6 +470,8 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
   const drop = useDropZone(uploads.add, !disabled);
   const uploading = uploads.items.some((i) => i.status === "uploading");
   const failed = uploads.items.some((i) => i.status === "error");
+  const { addExisting } = uploads;
+  useEffect(() => { if (attachRequest) addExisting(attachRequest.row); }, [attachRequest, addExisting]);
   const ready = uploads.items.filter((i) => i.status === "done" && i.row);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -449,6 +483,8 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
   const submit = () => {
     // Explicit "/image <prompt>" opens the same secure image flow (never inferred from ordinary text).
     const slash = text.trim().match(/^\/image(?:\s+([\s\S]*))?$/i);
+    const fileSlash = text.trim().match(/^\/(csv|xlsx|docx|pdf)(?:\s+([\s\S]*))?$/i);
+    if (fileSlash) { if (!fileBusy) { onFile(fileSlash[1]!.toLowerCase() as ArtifactFormat, (fileSlash[2] ?? "").trim()); setText(""); } return; }
     if (slash) { if (!imageBusy) { onImage((slash[1] ?? "").trim()); setText(""); } return; }
     if (!canSend) return;
     let t = text.trim();
@@ -468,6 +504,7 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
             <input ref={fileRef} type="file" multiple hidden onChange={(e) => { if (e.target.files) uploads.add(e.target.files); e.target.value = ""; }} />
             <Button type="button" size="icon" variant="ghost" disabled={disabled} onClick={() => fileRef.current?.click()} aria-label="Attach files" title="Attach files"><Paperclip className="size-4" /></Button>
             <Button type="button" size="icon" variant="ghost" disabled={imageBusy} onClick={() => onImage("")} aria-label="Generate image" title="Generate image (or type /image)"><ImageIcon className="size-4" /></Button>
+            <Button type="button" size="icon" variant="ghost" disabled={fileBusy} onClick={() => onFile(null, "")} aria-label="Create file" title="Create file (or type /pdf, /docx, /xlsx, /csv)"><FilePlus2 className="size-4" /></Button>
             <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} rows={1}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
               placeholder={disabled ? "Select a model to start" : "Message…"} aria-label="Message"
@@ -475,7 +512,7 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
             {busy ? (
               <Button type="button" size="icon" variant="secondary" onClick={onStop} aria-label="Stop response"><Square className="size-4" /></Button>
             ) : (
-              <Button type="submit" size="icon" disabled={!canSend && !/^\/image\b/i.test(text.trim())} aria-label="Send"><SendHorizontal className="size-4" /></Button>
+              <Button type="submit" size="icon" disabled={!canSend && !/^\/(image|csv|xlsx|docx|pdf)\b/i.test(text.trim())} aria-label="Send"><SendHorizontal className="size-4" /></Button>
             )}
           </div>
         </div>

@@ -36,8 +36,16 @@ OPENAI_API_KEY=<set via secrets, never in code>
 ANTHROPIC_API_KEY=<set via secrets, never in code>
 ```
 
+## Approval workflow
+- **The first registered user becomes admin and is approved automatically.** A database lock makes this race-safe.
+- **Every later user gets the `user` role and must be approved by an admin.** Until then they see "awaiting administrator approval" at `/disabled`.
+- **Disabled users** are sent to `/disabled` with a "contact an administrator" message.
+- **Database rules:** `is_admin()` and `is_active_approved_user()` are security-definer functions with a fixed search_path. A trigger blocks non-admins from changing `is_approved` or `is_disabled`. Only admins can add or remove roles, and they cannot remove their own.
+- **Approving users:** there's no admin screen yet. Run this in the backend SQL editor:
+  `update public.profiles set is_approved = true where id = '<user-id>';`
+
+## Google OAuth
+Google sign-in works out of the box with managed credentials. To use your own Google client, go to Cloud → Users → Auth Settings → Sign In Methods → Google.
+
 ## Manual setup
-1. Sign up once, then make yourself admin by running this in the backend SQL editor:
-   `insert into public.user_roles (user_id, role) select id, 'admin' from auth.users where email = 'you@example.com';`
-2. Optional: add your own Google OAuth client under Cloud → Users → Auth Settings → Google.
-3. Optional: turn on leaked-password protection under Cloud → Users → Auth Settings → Email.
+1. Optional: turn on leaked-password protection under Cloud → Users → Auth Settings → Email.

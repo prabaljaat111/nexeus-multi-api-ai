@@ -70,7 +70,7 @@ function ChatThread() {
           <div className="flex items-center gap-2">
             <ModelSelector models={models.data} loading={models.isPending} value={selectedModel?.id ?? null}
               onChange={(m) => save.mutate({ selected_model_id: m.id, selected_connection_id: m.connection_id })} />
-            <ChatSettings chat={c} onSave={(p) => save.mutateAsync(p).then(() => notify.success("Chat settings saved"))} />
+            <ChatSettings chat={c} onSave={(p) => save.mutateAsync(p).then(() => { notify.success("Chat settings saved"); })} />
           </div>
         }
       />
@@ -92,7 +92,7 @@ function ModelSelector({ models, loading, value, onChange }: {
   const byConn = new Map<string, SelectableModel[]>();
   models.forEach((m) => byConn.set(m.connection_name, [...(byConn.get(m.connection_name) ?? []), m]));
   return (
-    <Select value={value ?? undefined} onValueChange={(id) => { const m = models.find((x) => x.id === id); if (m) onChange(m); }}>
+    <Select value={value ?? ""} onValueChange={(id) => { const m = models.find((x) => x.id === id); if (m) onChange(m); }}>
       <SelectTrigger className="h-9 w-40 sm:w-56" aria-label="Select model"><SelectValue placeholder="Select a model" /></SelectTrigger>
       <SelectContent>
         {[...byConn.entries()].map(([name, items]) => (

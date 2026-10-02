@@ -90,8 +90,14 @@ export function useAttachmentUploads(chatId: string) {
   }, [items, run]);
 
   const clear = useCallback(() => setItems([]), []);
+  /** Adds an already-stored server file (e.g. a reused generated document) as a ready attachment. */
+  const addExisting = useCallback((row: AttachmentRow) => {
+    const file = new File([], row.original_filename, { type: row.mime_type ?? "" });
+    Object.defineProperty(file, "size", { value: row.size_bytes });
+    setItems((s) => [...s, { key: crypto.randomUUID(), file, progress: 100, status: "done", row }]);
+  }, []);
   useEffect(() => { setItems([]); }, [chatId]);
-  return { items, add, remove, retry, clear };
+  return { items, add, remove, retry, clear, addExisting };
 }
 
 export function useAttachmentUrl() {

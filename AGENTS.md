@@ -18,3 +18,4 @@
 - Provider keys are encrypted server-side (`connections.server.ts`) and the `connections.encrypted_api_key` column is excluded from client grants; connection writes only via server functions using the admin client after auth + role checks.
 - The landing page's `nx` html class is applied only on `/` (inline script + effect) — its global CSS would otherwise break app pages.
 - Theme preference is stored in localStorage key `uaw-theme` and applied pre-paint by an inline script — avoids theme flash.
+- Chat provider calls happen only in the `/api/chat-completion` server route (raw SSE needs a Response, so not a server function); it authenticates via bearer token and writes messages through a user-scoped client under RLS.

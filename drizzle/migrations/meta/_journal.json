@@ -15,6 +15,13 @@
       "when": 1790965321330,
       "tag": "0001_approval_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790965427171,
+      "tag": "0002_admin_user_management",
+      "breakpoints": true
     }
   ]
 }

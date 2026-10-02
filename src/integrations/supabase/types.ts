@@ -70,6 +70,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_set_admin: {
+        Args: { _grant: boolean; _user_id: string }
+        Returns: undefined
+      }
+      admin_set_approval: {
+        Args: { _approved: boolean; _user_id: string }
+        Returns: undefined
+      }
+      admin_set_disabled: {
+        Args: { _disabled: boolean; _user_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -120,9 +120,10 @@ function parse(data: string): Obj | null {
 export async function streamChat(p: StreamParams, onDelta: (text: string) => void): Promise<StreamResult> {
   const timeout = new AbortController();
   let base: string;
-  if (p.provider === "openai_compatible") {
-    if (!p.baseUrl) throw new ChatStreamError("model_unavailable");
-    try { base = validateBaseUrl(p.baseUrl); } catch { throw new ChatStreamError("provider_unavailable"); }
+  if (p.baseUrl) {
+    try { base = validateBaseUrl(p.baseUrl).replace(/\/+$/, ""); } catch { throw new ChatStreamError("provider_unavailable"); }
+  } else if (p.provider === "openai_compatible") {
+    throw new ChatStreamError("model_unavailable");
   } else {
     base = DEFAULT_BASE_URLS[p.provider];
   }

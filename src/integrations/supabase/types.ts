@@ -14,6 +14,79 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_attachments: {
+        Row: {
+          attachment_type: string
+          chat_id: string | null
+          created_at: string
+          extraction_status: string
+          id: string
+          message_id: string | null
+          mime_type: string | null
+          original_filename: string
+          processing_status: string
+          safe_preview_type: string | null
+          size_bytes: number
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attachment_type?: string
+          chat_id?: string | null
+          created_at?: string
+          extraction_status?: string
+          id?: string
+          message_id?: string | null
+          mime_type?: string | null
+          original_filename: string
+          processing_status?: string
+          safe_preview_type?: string | null
+          size_bytes: number
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attachment_type?: string
+          chat_id?: string | null
+          created_at?: string
+          extraction_status?: string
+          id?: string
+          message_id?: string | null
+          mime_type?: string | null
+          original_filename?: string
+          processing_status?: string
+          safe_preview_type?: string | null
+          size_bytes?: number
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_attachments_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_attachments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chats: {
         Row: {
           created_at: string

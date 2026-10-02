@@ -77,7 +77,7 @@ export async function fetchModels(provider: ProviderType, baseUrl: string | null
       const items = dataArray(body);
       for (const m of items) {
         const id = str(m["id"]);
-        if (id) out.push({ provider_model_id: id, display_name: str(m["display_name"]) ?? id, capabilities: {}, context_window: null });
+        if (id) out.push({ provider_model_id: id, display_name: str(m["display_name"]) ?? id, capabilities: anthropicVision(id) ? { chat: true, vision: true } : {}, context_window: null });
       }
       after = isObj(body) && body["has_more"] === true ? str(body["last_id"]) : null;
       if (!after) break;
@@ -99,6 +99,7 @@ export async function fetchModels(provider: ProviderType, baseUrl: string | null
         const caps: Record<string, boolean> = {};
         if (methods.includes("generateContent")) caps["chat"] = true;
         if (methods.includes("embedContent")) caps["embeddings"] = true;
+        if (caps["chat"] && /^gemini-(1\.5|2|3)/.test(id) && !/(tts|embedding|image-generation|aqa)/.test(id)) caps["vision"] = true;
         out.push({ provider_model_id: id, display_name: str(m["displayName"]) ?? id, capabilities: caps, context_window: posInt(m["inputTokenLimit"]) });
       }
       token = isObj(body) ? str(body["nextPageToken"]) : null;
@@ -113,7 +114,7 @@ export async function fetchModels(provider: ProviderType, baseUrl: string | null
     const id = str(m["id"]);
     if (!id) return [];
     const caps: Record<string, unknown> = {};
-    if (provider === "openai") { const img = openAiImageCaps(id); if (img) Object.assign(caps, img); }
+    if (provider === "openai") { const img = openAiImageCaps(id); if (img) Object.assign(caps, img); else if (openAiVision(id)) { caps["chat"] = true; caps["vision"] = true; } }
     let ctx: number | null = null;
     let name = id;
     if (provider === "openrouter") {
@@ -141,4 +142,13 @@ export async function testProvider(provider: ProviderType, baseUrl: string | nul
   else if (provider === "openrouter") await getJson(`${base}/key`, { authorization: `Bearer ${apiKey}` });
   else dataArray(await getJson(`${base}/models`, { authorization: `Bearer ${apiKey}` }));
   return "Connected";
+}
+
+/** Explicit, documented vision-capable families only — unknown ids never get vision. */
+function anthropicVision(id: string): boolean {
+  return /^claude-(3|3-5|3-7|opus-4|sonnet-4|haiku-4|opus-5|sonnet-5|haiku-5)/.test(id) || /^claude-(opus|sonnet|haiku)-\d/.test(id);
+}
+function openAiVision(id: string): boolean {
+  if (/(audio|realtime|search|transcribe|tts|embedding|moderation|instruct)/.test(id)) return false;
+  return /^(gpt-4o|gpt-4\.1|gpt-4-turbo|gpt-5|o1(?!-mini)|o3(?!-mini)|o4-mini|chatgpt-4o)/.test(id);
 }

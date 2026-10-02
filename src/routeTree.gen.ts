@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as ApiChatCompletionRouteImport } from './routes/api/chat-completion'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedAdminConnectionsRouteImport } from './routes/_authenticated/admin/connections'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
@@ -64,6 +65,11 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiChatCompletionRoute = ApiChatCompletionRouteImport.update({
+  id: '/api/chat-completion',
+  path: '/api/chat-completion',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/chat-completion': typeof ApiChatCompletionRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/chat-completion': typeof ApiChatCompletionRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/chat-completion': typeof ApiChatCompletionRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/api/chat-completion'
     | '/auth/callback'
     | '/admin/connections'
     | '/admin/users'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/api/chat-completion'
     | '/auth/callback'
     | '/admin/connections'
     | '/admin/users'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authenticated/admin'
+    | '/api/chat-completion'
     | '/auth/callback'
     | '/_authenticated/admin/connections'
     | '/_authenticated/admin/users'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  ApiChatCompletionRoute: typeof ApiChatCompletionRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/chat-completion': {
+      id: '/api/chat-completion'
+      path: '/api/chat-completion'
+      fullPath: '/api/chat-completion'
+      preLoaderRoute: typeof ApiChatCompletionRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -391,6 +411,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  ApiChatCompletionRoute: ApiChatCompletionRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport

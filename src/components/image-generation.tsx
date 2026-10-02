@@ -47,10 +47,13 @@ export function useImageGeneration(chatId: string, onSettled: () => void) {
   const gen = useServerFn(generateImageJob);
   const cancelFn = useServerFn(cancelImageJob);
   const [pending, setPending] = useState<{ jobId: string; prompt: string; cancelling: boolean } | null>(null);
+  const [failed, setFailed] = useState<{ message: string; options: ImageOptions } | null>(null);
+  useEffect(() => { setFailed(null); }, [chatId]);
   useEffect(() => { setPending(null); }, [chatId]);
 
   const generate = useCallback(async (o: ImageOptions) => {
     if (pending) return;
+    setFailed(null);
     const jobId = crypto.randomUUID();
     setPending({ jobId, prompt: o.prompt, cancelling: false });
     setTimeout(onSettled, 400); // show the saved prompt message promptly
@@ -59,7 +62,7 @@ export function useImageGeneration(chatId: string, onSettled: () => void) {
       notify.success("Image generated");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Image generation failed.";
-      if (msg.includes("cancelled")) notify.success("Image generation cancelled"); else notify.error(msg.startsWith("[") ? "Please check the image options." : msg);
+      if (msg.includes("cancelled")) notify.success("Image generation cancelled"); else { const m = msg.startsWith("[") ? "Please check the image options." : msg; notify.error(m); setFailed({ message: m, options: o }); }
     } finally {
       setPending(null);
       onSettled();
@@ -72,7 +75,7 @@ export function useImageGeneration(chatId: string, onSettled: () => void) {
     try { await cancelFn({ data: { jobId: pending.jobId } }); } catch (e) { notify.fromError(e); }
   }, [pending, cancelFn]);
 
-  return { pending, generate, cancel };
+  return { pending, generate, cancel, failed, dismissFailure: () => setFailed(null) };
 }
 
 const label = (v: string) => v.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase());

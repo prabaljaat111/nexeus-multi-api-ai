@@ -55,11 +55,14 @@ export function useArtifactGeneration(chatId: string, modelId: string | null, on
   const gen = useServerFn(generateArtifactJob);
   const cancelFn = useServerFn(cancelArtifactJob);
   const [pending, setPending] = useState<{ jobId: string; format: ArtifactFormat; cancelling: boolean } | null>(null);
+  const [failed, setFailed] = useState<{ message: string; options: ArtifactOptions } | null>(null);
+  useEffect(() => { setFailed(null); }, [chatId]);
   useEffect(() => { setPending(null); }, [chatId]);
 
   const generate = useCallback(async (o: ArtifactOptions) => {
     if (pending) return;
     if (!modelId) { notify.error("Choose a model before creating a file."); return; }
+    setFailed(null);
     const jobId = crypto.randomUUID();
     setPending({ jobId, format: o.format, cancelling: false });
     try {
@@ -68,7 +71,9 @@ export function useArtifactGeneration(chatId: string, modelId: string | null, on
       else notify.success("File creation cancelled");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
-      notify.error(!msg || msg.startsWith("[") ? "File generation failed. Your chat content was not changed." : msg);
+      const m = !msg || msg.startsWith("[") ? "File generation failed. Your chat content was not changed." : msg;
+      notify.error(m);
+      setFailed({ message: m, options: o });
     } finally {
       setPending(null);
       onSettled();
@@ -81,7 +86,7 @@ export function useArtifactGeneration(chatId: string, modelId: string | null, on
     try { await cancelFn({ data: { jobId: pending.jobId } }); } catch (e) { notify.fromError(e); }
   }, [pending, cancelFn]);
 
-  return { pending, generate, cancel };
+  return { pending, generate, cancel, failed, dismissFailure: () => setFailed(null) };
 }
 
 export function ArtifactProgress({ format, cancelling, onCancel }: { format: ArtifactFormat; cancelling: boolean; onCancel: () => void }) {

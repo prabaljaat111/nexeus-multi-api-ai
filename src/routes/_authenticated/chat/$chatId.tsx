@@ -2,7 +2,8 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { useChatStream, type StreamState } from "@/lib/chat-client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { attachmentKeys, MessageAttachments, PendingChips, useAttachmentUploads, useChatAttachments, useDropZone } from "@/components/attachments";
+import { attachmentKeys, MessageAttachments, PendingChips, useAttachmentUploads, useChatAttachments, useDropZone, useExtract } from "@/components/attachments";
+import { AnalyzePicker, Citations, ContextChips, ToolFailureCard, ToolsMenu } from "@/components/chat-tools";
 import type { AttachmentRow } from "@/lib/attachments";
 import { ArtifactDialog, ArtifactProgress, GeneratedFileCard, artifactJobToOptions, listArtifactJobs, useArtifactGeneration, type ArtifactFormat, type ArtifactJobRow, type ArtifactOptions } from "@/components/artifact-generation";
 import { GeneratedImageCard, ImageDialog, ImageProgress, jobToOptions, listImageJobs, useImageGeneration, type ImageJobRow, type ImageOptions } from "@/components/image-generation";
@@ -175,6 +176,9 @@ function ChatThread() {
         imageProgress={images.pending || artifacts.pending ? <>
           {images.pending && <ImageProgress prompt={images.pending.prompt} cancelling={images.pending.cancelling} onCancel={() => void images.cancel()} />}
           {artifacts.pending && <ArtifactProgress format={artifacts.pending.format} cancelling={artifacts.pending.cancelling} onCancel={() => void artifacts.cancel()} />}
+        </> : images.failed || artifacts.failed ? <>
+          {images.failed && <ToolFailureCard title="Image generation failed" message={images.failed.message} onDismiss={images.dismissFailure} onRetry={() => { const o = images.failed!.options; void images.generate(o); }} />}
+          {artifacts.failed && <ToolFailureCard title={`${artifacts.failed.options.format.toUpperCase()} file wasn't created`} message={artifacts.failed.message} onDismiss={artifacts.dismissFailure} onRetry={() => { const o = artifacts.failed!.options; void artifacts.generate(o); }} />}
         </> : null} />
       <ArtifactDialog open={!!artifactDialog} onOpenChange={(o) => { if (!o) setArtifactDialog(null); }} initial={artifactDialog?.initial ?? null}
         messages={messages.data} hasModel={!!selectedModel} onSubmit={(o) => void artifacts.generate(o)} />
@@ -182,9 +186,10 @@ function ChatThread() {
         onSubmit={(o) => void images.generate(o)} />
       <Composer chatId={chatId} disabled={!selectedModel} busy={stream.busy} onStop={stream.stop}
         fileBusy={!!artifacts.pending} onFile={(format, instruction) => setArtifactDialog({ initial: format ? { format, ...(instruction ? { instruction } : {}) } : null })}
-        attachRequest={attachRequest}
+        attachRequest={attachRequest} chatAttachments={attachments.data} vision={!!selectedModel?.vision}
         imageBusy={!!images.pending} onImage={(prompt) => openImageDialog(prompt ? { prompt } : null)}
-        onSend={(text, attachmentIds) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text, attachmentIds }); }} hint={hint} />
+        onSend={(text, attachmentIds, contextAttachmentIds) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text, attachmentIds, contextAttachmentIds }); }}
+        onAttachmentsRefresh={() => void qc.invalidateQueries({ queryKey: attachmentKeys.chat(chatId) })} hint={hint} />
     </div>
   );
 }
@@ -437,6 +442,7 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
           <GeneratedImageCard a={a} job={imageJob} canRegenerate={canGenerateImage} onRegenerate={onImageVariation} onDeleted={onAttachmentsChanged} />
         </div>
       ))}
+      {!isUser && m.citations && <div className="w-full max-w-[85%]"><Citations c={m.citations} /></div>}
       {docs.map((a) => (
         <div key={a.id} className="mt-2 w-full max-w-md">
           <GeneratedFileCard a={a} job={artifactJob} canRegenerate={canGenerateFile} onRegenerate={onFileRegenerate} onDeleted={onAttachmentsChanged} onAttach={onAttachFile} />
@@ -459,8 +465,9 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
   );
 });
 
-function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, imageBusy, onFile, fileBusy, attachRequest }: {
-  chatId: string; disabled: boolean; busy: boolean; hint: string; onSend: (text: string, attachmentIds: string[]) => void; onStop: () => void;
+function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, imageBusy, onFile, fileBusy, attachRequest, chatAttachments, vision, onAttachmentsRefresh }: {
+  chatId: string; disabled: boolean; busy: boolean; hint: string; onSend: (text: string, attachmentIds: string[], contextIds: string[]) => void; onStop: () => void;
+  chatAttachments: AttachmentRow[] | undefined; vision: boolean; onAttachmentsRefresh: () => void;
   onImage: (prompt: string) => void; imageBusy: boolean;
   onFile: (format: ArtifactFormat | null, instruction: string) => void; fileBusy: boolean; attachRequest: { row: AttachmentRow; n: number } | null;
 }) {
@@ -472,6 +479,22 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
   const uploading = uploads.items.some((i) => i.status === "uploading");
   const failed = uploads.items.some((i) => i.status === "error");
   const { addExisting } = uploads;
+  const extract = useExtract();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [contextRows, setContextRows] = useState<AttachmentRow[]>([]);
+  useEffect(() => { setContextRows([]); }, [chatId]);
+  async function useExisting(rows: AttachmentRow[]) {
+    setContextRows(rows);
+    const pending = rows.filter((a) => !a.extraction && !isVisionImage(a.mime_type));
+    if (!pending.length) return;
+    const results = await Promise.all(pending.map(async (a) => ({ a, r: await extract(a.id) })));
+    const bad = results.filter((x) => x.r.status !== "complete");
+    if (bad.length) {
+      setContextRows((s) => s.filter((a) => !bad.some((b) => b.a.id === a.id)));
+      bad.forEach((b) => notify.error(`${b.a.original_filename}: ${b.r.message ?? "AI analysis is not available for this file."}`));
+    }
+    onAttachmentsRefresh();
+  }
   useEffect(() => { if (attachRequest) addExisting(attachRequest.row); }, [attachRequest, addExisting]);
   const ready = uploads.items.filter((i) => i.status === "done" && i.row);
   useLayoutEffect(() => {
@@ -480,7 +503,7 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
   }, [text]);
-  const canSend = !disabled && !busy && !uploading && !failed && (!!text.trim() || ready.length > 0);
+  const canSend = !disabled && !busy && !uploading && !failed && (!!text.trim() || ready.length > 0 || contextRows.length > 0);
   const submit = () => {
     // Explicit "/image <prompt>" opens the same secure image flow (never inferred from ordinary text).
     const slash = text.trim().match(/^\/image(?:\s+([\s\S]*))?$/i);
@@ -491,7 +514,13 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
     let t = text.trim();
     if (t.length > 32_000) { notify.error("Your message is too long (max 32,000 characters)."); return; }
     if (!t) t = `Attached: ${ready.map((i) => i.file.name).join(", ")}`.slice(0, 2000);
-    onSend(t, ready.map((i) => i.row!.id));
+    const reading = uploads.items.some((i) => i.analysis === "reading");
+    if (reading) { notify.error("Wait until your files have been read for AI."); return; }
+    const included = ready.filter((i) => i.include && (i.analysis === "ready" || (i.analysis === "image" && vision))).map((i) => i.row!.id);
+    const ctx = [...new Set([...included, ...contextRows.map((a) => a.id)])].slice(0, 10);
+    if (!text.trim() && ctx.length) t = "Please analyze the attached file(s).";
+    onSend(t, ready.map((i) => i.row!.id), ctx);
+    setContextRows([]);
     setText("");
     uploads.clear();
   };
@@ -500,12 +529,12 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
       <form className="mx-auto max-w-3xl" onSubmit={(e) => { e.preventDefault(); submit(); }}>
         <div className={cn("rounded-lg border bg-card p-2 shadow-sm focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring/30", drop.over && "border-primary ring-2 ring-primary/30")}>
           {drop.over && <p className="pb-2 text-center text-xs text-primary">Drop files to attach (max 50 MB each)</p>}
-          <PendingChips items={uploads.items} onRemove={uploads.remove} onRetry={uploads.retry} />
+          <ContextChips rows={contextRows} onRemove={(id) => setContextRows((s) => s.filter((a) => a.id !== id))} />
+          <PendingChips items={uploads.items} onRemove={uploads.remove} onRetry={uploads.retry} onToggleInclude={uploads.toggleInclude} onReanalyze={uploads.reanalyze} vision={vision} />
           <div className="flex items-end gap-2">
             <input ref={fileRef} type="file" multiple hidden onChange={(e) => { if (e.target.files) uploads.add(e.target.files); e.target.value = ""; }} />
-            <Button type="button" size="icon" variant="ghost" disabled={disabled} onClick={() => fileRef.current?.click()} aria-label="Attach files" title="Attach files"><Paperclip className="size-4" /></Button>
-            <Button type="button" size="icon" variant="ghost" disabled={imageBusy} onClick={() => onImage("")} aria-label="Generate image" title="Generate image (or type /image)"><ImageIcon className="size-4" /></Button>
-            <Button type="button" size="icon" variant="ghost" disabled={fileBusy} onClick={() => onFile(null, "")} aria-label="Create file" title="Create file (or type /pdf, /docx, /xlsx, /csv)"><FilePlus2 className="size-4" /></Button>
+            <ToolsMenu disabled={disabled} running={{ image: imageBusy, file: fileBusy }} onUpload={() => fileRef.current?.click()}
+              onAnalyze={() => setPickerOpen(true)} onImage={() => onImage("")} onFile={(f) => onFile(f, "")} />
             <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} rows={1}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
               placeholder={disabled ? "Select a model to start" : "Message…"} aria-label="Message"
@@ -517,6 +546,8 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
             )}
           </div>
         </div>
+        <AnalyzePicker open={pickerOpen} onOpenChange={setPickerOpen} attachments={chatAttachments} selected={contextRows.map((a) => a.id)} vision={vision}
+          onConfirm={(rows) => void useExisting(rows)} />
         <p className="mt-1.5 text-center text-xs text-muted-foreground">{uploading ? "Waiting for uploads to finish…" : failed ? "Retry or remove failed uploads to send." : hint}</p>
       </form>
     </div>

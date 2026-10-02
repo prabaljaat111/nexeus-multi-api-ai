@@ -20,10 +20,11 @@ const TIMEOUT_MS = 15_000;
 const MAX_PAGES = 20;
 
 function resolveBase(provider: ProviderType, baseUrl: string | null): string {
-  if (provider === "openai_compatible") {
-    if (!baseUrl) throw new ProviderError("Invalid endpoint");
-    try { return validateBaseUrl(baseUrl); } catch { throw new ProviderError("Invalid endpoint"); }
+  // Any provider may use a custom (validated, SSRF-checked) base URL, e.g. a proxy.
+  if (baseUrl) {
+    try { return validateBaseUrl(baseUrl).replace(/\/+$/, ""); } catch { throw new ProviderError("Invalid endpoint"); }
   }
+  if (provider === "openai_compatible") throw new ProviderError("Invalid endpoint");
   return DEFAULT_BASE_URLS[provider];
 }
 

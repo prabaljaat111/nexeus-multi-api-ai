@@ -48,7 +48,7 @@ export const upsertConnection = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Standard providers use server-side defaults; only openai_compatible stores a custom URL.
-    const baseUrl = data.providerType === "openai_compatible" && data.baseUrl ? validateBaseUrl(data.baseUrl) : null;
+    const baseUrl = data.baseUrl ? validateBaseUrl(data.baseUrl) : null;
     const ownerId = data.scope === "personal" ? context.userId : null;
 
     const fields: {

@@ -201,7 +201,7 @@ function ConnectionDialog({ scope, initial, onClose, onSaved, save }: {
       await save({
         ...(initial ? { id: initial.id } : {}),
         scope, name, providerType: provider, enabled,
-        ...(needsUrl ? { baseUrl } : {}),
+        ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}),
         ...(apiKey ? { apiKey } : {}),
       });
       notify.success(initial ? "Connection updated" : "Connection added");
@@ -234,12 +234,11 @@ function ConnectionDialog({ scope, initial, onClose, onSaved, save }: {
             <Label htmlFor="c-name">Name</Label>
             <Input id="c-name" required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="My OpenAI key" />
           </div>
-          {needsUrl && (
-            <div className="space-y-2">
-              <Label htmlFor="c-url">Base URL</Label>
-              <Input id="c-url" required type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.example.com/v1" />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="c-url">Base URL{needsUrl ? "" : " (optional)"}</Label>
+            <Input id="c-url" required={needsUrl} type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder={needsUrl ? "https://api.example.com/v1" : "Leave blank to use the provider's official address"} />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="c-key">API key</Label>
             <Input id="c-key" type="password" autoComplete="off" required={!initial} value={apiKey} onChange={(e) => setApiKey(e.target.value)}

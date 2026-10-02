@@ -28,7 +28,7 @@ function AppLayout() {
     <SidebarProvider>
       <AppSidebar user={user} isAdmin={isAdmin} />
       <CommandPalette userId={user.id} />
-      <SidebarInset className="flex min-h-svh flex-col">
+      <SidebarInset className="flex min-h-svh min-w-0 flex-col overflow-hidden">
         <Outlet />
       </SidebarInset>
     </SidebarProvider>

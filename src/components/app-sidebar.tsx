@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
-import { ChevronsUpDown, Cpu, KeyRound, LogOut, MessageSquare, Plus, Settings, Shield, UserRound } from "lucide-react";
+import { ChevronsUpDown, Cpu, KeyRound, LogOut, Plus, Settings, Shield, UserRound } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
@@ -14,6 +14,7 @@ import { ChatHistory } from "@/components/chat-history";
 import { supabase } from "@/integrations/supabase/client";
 import { chatKeys, createChat } from "@/lib/chats";
 import { notify } from "@/lib/toast";
+import { BrandLogo } from "@/components/brand-logo";
 
 export function AppSidebar({ user, isAdmin }: { user: User; isAdmin: boolean }) {
   const navigate = useNavigate();
@@ -40,14 +41,11 @@ export function AppSidebar({ user, isAdmin }: { user: User; isAdmin: boolean }) 
 
   return (
     <Sidebar>
-      <SidebarHeader className="gap-3 p-3">
-        <Link to="/chat" className="flex items-center gap-2 px-1" onClick={closeMobile}>
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <MessageSquare className="size-4" />
-          </div>
-          <span className="text-sm font-semibold">Unified AI Workspace</span>
+      <SidebarHeader className="gap-3 border-b border-sidebar-border p-3">
+        <Link to="/chat" className="flex items-center gap-2 px-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" onClick={closeMobile}>
+          <BrandLogo className="group-data-[collapsible=icon]:[&>span:last-child]:hidden" />
         </Link>
-        <Button variant="outline" className="justify-start" disabled={newChat.isPending} onClick={() => newChat.mutate()}>
+        <Button variant="outline" className="justify-start bg-sidebar-accent/40 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0" disabled={newChat.isPending} onClick={() => newChat.mutate()}>
           <Plus className="size-4" />New chat
         </Button>
       </SidebarHeader>

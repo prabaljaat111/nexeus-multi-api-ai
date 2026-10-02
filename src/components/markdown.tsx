@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentPropsWithoutRef } from "react";
+import { memo, useRef, useState, type ComponentPropsWithoutRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -36,7 +36,7 @@ function CodeBlock(props: ComponentPropsWithoutRef<"pre">) {
  * Renders untrusted model output safely: raw HTML is never rendered (no rehype-raw),
  * and react-markdown strips dangerous URL protocols. GFM, highlighting and KaTeX enabled.
  */
-export function Markdown({ content, className }: { content: string; className?: string }) {
+export const Markdown = memo(function Markdown({ content, className }: { content: string; className?: string }) {
   return (
     <div className={cn("markdown-body", className)}>
       <ReactMarkdown
@@ -53,4 +53,4 @@ export function Markdown({ content, className }: { content: string; className?: 
       </ReactMarkdown>
     </div>
   );
-}
+});

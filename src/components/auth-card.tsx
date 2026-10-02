@@ -1,16 +1,16 @@
 import type { ReactNode } from "react";
-import { MessageSquare } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AuthCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">
+    <div className="auth-shell relative flex min-h-svh items-center justify-center overflow-hidden bg-background px-4 py-10">
       <div className="absolute right-4 top-4"><ThemeToggle /></div>
-      <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-sm">
+      <Link to="/" className="absolute left-4 top-4" aria-label="Unified AI Workspace home"><BrandLogo /></Link>
+      <div className="auth-panel w-full max-w-sm rounded-lg border bg-card p-6 shadow-xl shadow-foreground/5">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <MessageSquare className="size-5" />
-          </div>
+          <BrandLogo compact />
           <div>
             <h1 className="text-lg font-semibold text-card-foreground">{title}</h1>
             {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}

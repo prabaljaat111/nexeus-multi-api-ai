@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Cpu, KeyRound, MessageSquarePlus, Search, SunMoon } from "lucide-react";
@@ -15,13 +15,13 @@ export function CommandPalette({ userId }: { userId: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const { isMobile, setOpen: setSidebarOpen, setOpenMobile } = useSidebar();
 
-  async function newChat() {
+  const newChat = useCallback(async () => {
     try {
       const id = await createChat(userId);
       void qc.invalidateQueries({ queryKey: chatKeys.list });
       void navigate({ to: "/chat/$chatId", params: { chatId: id } });
     } catch (e) { notify.fromError(e); }
-  }
+  }, [userId, qc, navigate]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -31,7 +31,7 @@ export function CommandPalette({ userId }: { userId: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, [newChat]);
 
   const run = (fn: () => void) => { setOpen(false); fn(); };
   const focusSearch = () => {

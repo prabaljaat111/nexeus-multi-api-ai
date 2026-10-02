@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useChatStream, type StreamState } from "@/lib/chat-client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -312,7 +312,7 @@ function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate
   );
 }
 
-function StaticBubble({ role, content }: { role: "user" | "assistant"; content: string }) {
+const StaticBubble = memo(function StaticBubble({ role, content }: { role: "user" | "assistant"; content: string }) {
   return (
     <div className={cn("flex", role === "user" ? "justify-end" : "justify-start")}>
       <div className={cn("min-w-0 max-w-[85%] text-sm", role === "user" ? "rounded-2xl bg-primary px-4 py-2.5 text-primary-foreground" : "w-full")}>
@@ -320,7 +320,7 @@ function StaticBubble({ role, content }: { role: "user" | "assistant"; content: 
       </div>
     </div>
   );
-}
+});
 
 function CopyButton({ text }: { text: string }) {
   const [done, setDone] = useState(false);
@@ -335,7 +335,7 @@ function ActionButton({ label, onClick, children }: { label: string; onClick: ()
   return <Button type="button" size="icon" variant="ghost" className="size-7 text-muted-foreground" aria-label={label} title={label} onClick={onClick}>{children}</Button>;
 }
 
-function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete }: {
+const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete }: {
   message: ChatMessage; canAct: boolean; isEditing: boolean; canRegenerate: boolean; canEdit: boolean;
   onRegenerate: () => void; onEdit: () => void; onCancelEdit: () => void; onSubmitEdit: (t: string) => void; onDelete: () => Promise<void>;
 }) {
@@ -382,7 +382,7 @@ function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegen
       </div>
     </div>
   );
-}
+});
 
 function Composer({ disabled, busy, hint, onSend, onStop }: { disabled: boolean; busy: boolean; hint: string; onSend: (text: string) => void; onStop: () => void }) {
   const [text, setText] = useState("");
@@ -401,9 +401,9 @@ function Composer({ disabled, busy, hint, onSend, onStop }: { disabled: boolean;
     setText("");
   };
   return (
-    <div className="border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div className="border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
       <form className="mx-auto max-w-3xl" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        <div className="flex items-end gap-2 rounded-xl border bg-card p-2 focus-within:ring-2 focus-within:ring-ring">
+        <div className="flex items-end gap-2 rounded-lg border bg-card p-2 shadow-sm focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring/30">
           <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} rows={1}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
             placeholder={disabled ? "Select a model to start" : "Message…"} aria-label="Message"

@@ -75,3 +75,8 @@ Privileged mutations run in authenticated server functions (`src/lib/admin-users
 - Tables `chats` and `messages` with RLS: users read/write only their own chats and those chats' messages (and only while approved/active); admins can read all via `is_admin()`. No anonymous access.
 - Triggers keep `chats.updated_at` current on settings changes and on any message insert/update.
 - Chat CRUD runs from the browser client under RLS (`src/lib/chats.ts`). Sending/streaming is not implemented yet.
+
+## Streaming chat completion
+- `POST /api/chat-completion` (`src/routes/api/chat-completion.ts`) is the only code path that calls AI providers for chat. It verifies the bearer token, active/approved status, chat ownership, model visibility/enabled connection; applies a 20 responses/min per-user limit, one in-flight stream per chat, prompt-size limits, and `requestId` idempotency (`messages.client_request_id`).
+- Adapters (`src/lib/chat-stream.server.ts`): OpenAI/OpenRouter/OpenAI-compatible Chat Completions, Anthropic Messages, Gemini `streamGenerateContent`. 60s connect timeout and 120s idle timeout. Emits SSE `delta`, `complete`, `error` with friendly messages only.
+- Lifecycle: user message saved → assistant row `streaming` → content accumulated server-side → `complete` / `stopped` / `error`. Stop also saves the partial text from the browser as a fallback.

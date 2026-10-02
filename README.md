@@ -59,3 +59,9 @@ Privileged mutations run in authenticated server functions (`src/lib/admin-users
 3. **Approve:** as A, click **Approve** on B. B clicks "Check again" and reaches `/chat`.
 4. **Disable/enable:** as A, **Disable** B → B is sent to `/disabled` on next navigation. **Enable** restores access. Note A's own Disable button is blocked, and removing A's admin role while A is the only admin fails with a friendly message.
 5. **Normal user blocked:** as B, open `/admin/users` → redirected to `/chat`. Calling the server functions directly as B returns "You need administrator access to do that."
+
+## Provider connections
+- Table `connections` (personal or global). RLS: owners read their personal rows; approved active users read global rows. Clients have column-level SELECT on safe metadata only — `encrypted_api_key` is not selectable, and clients have no insert/update/delete rights.
+- Writes go through authenticated server functions `upsertConnection` / `deleteConnection` (`src/lib/connections.functions.ts`): verify session token + `is_active_approved_user()`, `is_admin()` for global scope, Zod validation, AES-256-GCM encryption (`v1:<iv>:<ciphertext>`), masked hint `…abcd`.
+- Secret `CONNECTION_ENCRYPTION_KEY` (generated, already set). Rotating it makes existing keys undecryptable — users must re-enter them.
+- Custom base URLs (OpenAI-compatible only) must be HTTPS public hosts; localhost/private/link-local/metadata addresses are rejected unless the server secret `ALLOW_LOCAL_PROVIDER_ENDPOINTS=true` is set (development only). Standard providers use server-side default URLs.

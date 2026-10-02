@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      connections: {
+        Row: {
+          base_url: string | null
+          created_at: string
+          enabled: boolean
+          encrypted_api_key: string
+          id: string
+          key_hint: string | null
+          last_test_message: string | null
+          last_test_status: string | null
+          last_tested_at: string | null
+          name: string
+          owner_user_id: string | null
+          provider_type: string
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          base_url?: string | null
+          created_at?: string
+          enabled?: boolean
+          encrypted_api_key: string
+          id?: string
+          key_hint?: string | null
+          last_test_message?: string | null
+          last_test_status?: string | null
+          last_tested_at?: string | null
+          name: string
+          owner_user_id?: string | null
+          provider_type: string
+          scope: string
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string | null
+          created_at?: string
+          enabled?: boolean
+          encrypted_api_key?: string
+          id?: string
+          key_hint?: string | null
+          last_test_message?: string | null
+          last_test_status?: string | null
+          last_tested_at?: string | null
+          name?: string
+          owner_user_id?: string | null
+          provider_type?: string
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

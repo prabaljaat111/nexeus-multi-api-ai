@@ -77,7 +77,7 @@ function AdminUsersPage() {
     });
   }, [users.data, search, filter]);
 
-  const run = (userId: string, action: Action) => mutation.mutateAsync({ userId, action }).catch(() => undefined);
+  const run = (userId: string, action: Action) => mutation.mutateAsync({ userId, action }).then(() => undefined, () => undefined);
 
   return (
     <>
@@ -103,7 +103,7 @@ function AdminUsersPage() {
         {users.isPending ? (
           <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
         ) : users.isError ? (
-          <ErrorState message={users.error instanceof Error ? users.error.message : undefined} onRetry={() => void users.refetch()} />
+          <ErrorState message={users.error instanceof Error ? users.error.message : "Please try again."} onRetry={() => void users.refetch()} />
         ) : filtered.length === 0 ? (
           <EmptyState icon={Users} title={users.data.length === 0 ? "No users yet" : "No matching users"} description={users.data.length === 0 ? "Users appear here after they sign up." : "Try a different search or filter."} />
         ) : (
@@ -132,7 +132,7 @@ function AdminUsersPage() {
   );
 }
 
-function UserRow({ user: u, isSelf, busy, run }: { user: AdminUserRow; isSelf: boolean; busy: boolean; run: (id: string, a: Action) => Promise<unknown> }) {
+function UserRow({ user: u, isSelf, busy, run }: { user: AdminUserRow; isSelf: boolean; busy: boolean; run: (id: string, a: Action) => Promise<void> }) {
   const name = u.displayName || u.email || "this user";
   return (
     <TableRow>

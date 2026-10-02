@@ -21,14 +21,14 @@ const FRIENDLY: Record<string, string> = {
 
 function friendly(message: string | undefined): Error {
   const key = Object.keys(FRIENDLY).find((k) => message?.includes(k));
-  return new Error(key ? FRIENDLY[key] : "The action couldn't be completed. Please try again.");
+  return new Error((key && FRIENDLY[key]) || "The action couldn't be completed. Please try again.");
 }
 
 type AuthedSupabase = { rpc: (fn: "is_admin") => PromiseLike<{ data: boolean | null; error: unknown }> };
 
 async function assertAdmin(supabase: AuthedSupabase) {
   const { data, error } = await supabase.rpc("is_admin");
-  if (error || data !== true) throw new Error(FRIENDLY.not_admin);
+  if (error || data !== true) throw new Error(FRIENDLY['not_admin']);
 }
 
 export const listAdminUsers = createServerFn({ method: "GET" })

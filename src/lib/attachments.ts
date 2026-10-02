@@ -13,7 +13,17 @@ export interface AttachmentRow {
   processing_status: string;
   attachment_type?: string;
   created_at: string;
+  extraction?: AttachmentExtraction | null;
 }
+
+export interface AttachmentExtraction { extraction_status: string; error_message: string | null }
+
+export const VISION_MIME = ["image/png", "image/jpeg", "image/webp"];
+export const isVisionImage = (mime: string | null | undefined) => VISION_MIME.includes((mime ?? "").toLowerCase());
+const ANALYZABLE_EXT = /\.(txt|log|md|markdown|csv|json|pdf|docx|xlsx)$/i;
+/** Client-side hint only; the server re-checks with its own allow-list. */
+export const isAnalyzable = (name: string) => ANALYZABLE_EXT.test(name);
+export const NOT_ANALYZABLE = "File uploaded successfully, but AI analysis is not available for this format.";
 
 export function sanitizeFilename(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? "file";

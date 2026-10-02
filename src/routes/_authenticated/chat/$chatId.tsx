@@ -9,6 +9,7 @@ import { GeneratedImageCard, ImageDialog, ImageProgress, jobToOptions, listImage
 import {
   AlertCircle, AlertTriangle, ArrowDown, Bot, Check, ChevronsUpDown, Copy, ImageIcon, Loader2, Paperclip, Pencil, RotateCcw, SearchX, SendHorizontal,
   SlidersHorizontal, Square, Trash2,
+  FilePlus2,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState, ErrorState } from "@/components/states";

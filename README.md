@@ -70,3 +70,8 @@ Privileged mutations run in authenticated server functions (`src/lib/admin-users
 - Server functions `testConnection` / `fetchConnectionModels` (`src/lib/models.functions.ts`): verify session + `is_active_approved_user()` + `can_manage_connection()`, decrypt the key server-side only, call the provider with a 15s timeout and no redirects, and map failures to: Connected, Unauthorized key, Invalid endpoint, Provider timed out, Rate limited, Provider unavailable. Raw provider responses are never returned.
 - Endpoints: OpenAI/OpenAI-compatible `GET /models`, OpenRouter `GET /models` (test uses `/key`), Anthropic `GET /v1/models`, Gemini `GET /v1beta/models`.
 - `models` table: upserted per connection; existing `enabled` values are preserved. Only reliable fields are stored (context window/capabilities where the provider supplies them). Users can only update `enabled`, via RLS (owner for personal, admin for global).
+
+## Chats & messages
+- Tables `chats` and `messages` with RLS: users read/write only their own chats and those chats' messages (and only while approved/active); admins can read all via `is_admin()`. No anonymous access.
+- Triggers keep `chats.updated_at` current on settings changes and on any message insert/update.
+- Chat CRUD runs from the browser client under RLS (`src/lib/chats.ts`). Sending/streaming is not implemented yet.

@@ -39,6 +39,7 @@ export interface SelectableModel {
   connection_name: string;
   provider_type: string;
   scope: "personal" | "global";
+  vision: boolean;
 }
 
 export const chatKeys = {
@@ -124,6 +125,7 @@ export async function listSelectableModels(): Promise<SelectableModel[]> {
     return c?.enabled && !isImageCaps(m.capabilities) ? [{
       id: m.id, display_name: m.display_name, provider_model_id: m.provider_model_id, connection_id: m.connection_id,
       connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const,
+      vision: (m.capabilities as Record<string, unknown> | null)?.["vision"] === true,
     }] : [];
   });
 }

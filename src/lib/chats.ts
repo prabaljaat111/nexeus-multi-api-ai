@@ -113,7 +113,7 @@ export async function listImageModels(): Promise<ImageModel[]> {
     const c = m.connections as { name: string; enabled: boolean; provider_type: string; scope: string } | null;
     return c?.enabled && isImageCaps(m.capabilities) ? [{
       id: m.id, display_name: m.display_name, provider_model_id: m.provider_model_id, connection_id: m.connection_id,
-      connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const, caps: m.capabilities,
+      connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const, caps: m.capabilities, vision: false,
     }] : [];
   });
 }

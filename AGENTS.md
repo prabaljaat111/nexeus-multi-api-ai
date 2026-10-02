@@ -16,7 +16,7 @@
 - `profiles.is_disabled` and `is_approved` are admin-only, enforced by a DB trigger; the signup trigger makes the first user admin under an advisory lock — RLS alone cannot restrict columns or serialize signups.
 - AI provider calls and provider keys stay server-side in `createServerFn` handlers — keys must never reach the browser.
 - Provider keys are encrypted server-side (`connections.server.ts`) and the `connections.encrypted_api_key` column is excluded from client grants; connection writes only via server functions using the admin client after auth + role checks.
-- The landing page's `nx` html class is applied only on `/` (inline script + effect) — its global CSS would otherwise break app pages.
+- The shared `BrandLogo` and semantic theme tokens define the public, auth, and app identity; homepage sections below the hero are lazy-loaded — keeps branding consistent and the public entry light.
 - Theme preference is stored in localStorage key `uaw-theme` and applied pre-paint by an inline script — avoids theme flash.
 - Chat provider calls happen only in the `/api/chat-completion` server route (raw SSE needs a Response, so not a server function); it authenticates via bearer token and writes messages through a user-scoped client under RLS.
 - Edit/regenerate (Phase 1) delete the original message(s) client-side under RLS before resending — no branching/version history.

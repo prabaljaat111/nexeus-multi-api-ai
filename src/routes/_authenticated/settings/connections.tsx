@@ -27,9 +27,9 @@ function ConnectionsPage() {
   return (
     <>
       <PageHeader title="Connections" description="Your AI provider connections" />
-      <div className="p-4">
+      <div className="mx-auto w-full max-w-6xl p-4 sm:p-6">
         <Tabs defaultValue="personal">
-          <TabsList>
+          <TabsList className="grid w-full max-w-sm grid-cols-2">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="shared">Shared</TabsTrigger>
           </TabsList>

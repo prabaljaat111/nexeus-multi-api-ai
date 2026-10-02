@@ -82,7 +82,7 @@ function AdminUsersPage() {
   return (
     <>
       <PageHeader title="Users" description="Admin · manage accounts and roles" />
-      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 sm:flex-row sm:items-center sm:px-6">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input className="pl-8" placeholder="Search by name or email" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search users" />
@@ -99,7 +99,7 @@ function AdminUsersPage() {
         </Select>
       </div>
 
-      <div className="px-4 pb-8">
+      <div className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6">
         {users.isPending ? (
           <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
         ) : users.isError ? (
@@ -107,7 +107,7 @@ function AdminUsersPage() {
         ) : filtered.length === 0 ? (
           <EmptyState icon={Users} title={users.data.length === 0 ? "No users yet" : "No matching users"} description={users.data.length === 0 ? "Users appear here after they sign up." : "Try a different search or filter."} />
         ) : (
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>

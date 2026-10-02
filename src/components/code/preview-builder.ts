@@ -101,7 +101,7 @@ async function buildReact(files: FileLike[]): Promise<PreviewBuild> {
   const assets: string[] = [];
   for (const f of files) {
     if (f.path.endsWith(".css")) assets.push(esc(`${JSON.stringify(f.path)}:{css:${JSON.stringify(f.content)}}`));
-    else if (f.path.endsWith(".json")) assets.push(esc`${JSON.stringify(f.path)}:{json:${JSON.stringify(f.content)}}`.replace(/<\/script/gi, "<\\/script"));
+    else if (f.path.endsWith(".json")) assets.push(esc(`${JSON.stringify(f.path)}:{json:${JSON.stringify(f.content)}}`));
     else if (f.path.endsWith(".svg")) assets.push(`${JSON.stringify(f.path)}:{url:${JSON.stringify(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(f.content)}`)}}`);
   }
   const urlFor = (spec: string) => {

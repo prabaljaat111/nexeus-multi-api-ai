@@ -26,7 +26,7 @@ function langFor(path: string) {
 const CodeEditor = forwardRef<EditorHandle, { path: string; value: string; onChange: (v: string) => void; onSave: () => void }>(
   function CodeEditor({ path, value, onChange, onSave }, ref) {
     const cm = useRef<ReactCodeMirrorRef>(null);
-    const { resolved } = useTheme();
+    const { resolvedTheme: resolved } = useTheme();
     const extensions = useMemo(() => langFor(path), [path]);
     useImperativeHandle(ref, () => ({
       undo: () => { if (cm.current?.view) undo(cm.current.view); },

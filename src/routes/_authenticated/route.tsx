@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
+import { CommandPalette } from "@/components/command-palette";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -26,6 +27,7 @@ function AppLayout() {
   return (
     <SidebarProvider>
       <AppSidebar user={user} isAdmin={isAdmin} />
+      <CommandPalette userId={user.id} />
       <SidebarInset className="flex min-h-svh flex-col">
         <Outlet />
       </SidebarInset>

@@ -23,6 +23,8 @@ export interface ChatMessage {
   status: "streaming" | "complete" | "error" | "stopped";
   error_message: string | null;
   created_at: string;
+  model_id: string | null;
+  model_label: string | null;
 }
 
 export interface SelectableModel {
@@ -31,6 +33,8 @@ export interface SelectableModel {
   provider_model_id: string;
   connection_id: string;
   connection_name: string;
+  provider_type: string;
+  scope: "personal" | "global";
 }
 
 export const chatKeys = {
@@ -57,10 +61,13 @@ export async function getChat(id: string): Promise<ChatDetail | null> {
 
 export async function listMessages(chatId: string): Promise<ChatMessage[]> {
   const { data, error } = await supabase.from("messages")
-    .select("id, role, content, status, error_message, created_at")
+    .select("id, role, content, status, error_message, created_at, model_id, models(display_name, connections(name))")
     .eq("chat_id", chatId).order("created_at", { ascending: true });
   if (error) throw new Error("Couldn't load messages.");
-  return data as ChatMessage[];
+  return data.map(({ models, ...m }) => {
+    const md = models as { display_name: string; connections: { name: string } | null } | null;
+    return { ...m, model_label: md ? (md.connections ? `${md.connections.name} · ${md.display_name}` : md.display_name) : null } as ChatMessage;
+  });
 }
 
 export async function createChat(userId: string): Promise<string> {
@@ -85,12 +92,15 @@ export async function deleteChat(id: string): Promise<void> {
 /** Enabled models from enabled connections visible to the user (RLS-scoped). */
 export async function listSelectableModels(): Promise<SelectableModel[]> {
   const { data, error } = await supabase.from("models")
-    .select("id, display_name, provider_model_id, connection_id, connections(name, enabled)")
+    .select("id, display_name, provider_model_id, connection_id, connections(name, enabled, provider_type, scope)")
     .eq("enabled", true).order("display_name");
   if (error) throw new Error("Couldn't load models.");
   return data.flatMap((m) => {
-    const c = m.connections as { name: string; enabled: boolean } | null;
-    return c?.enabled ? [{ id: m.id, display_name: m.display_name, provider_model_id: m.provider_model_id, connection_id: m.connection_id, connection_name: c.name }] : [];
+    const c = m.connections as { name: string; enabled: boolean; provider_type: string; scope: string } | null;
+    return c?.enabled ? [{
+      id: m.id, display_name: m.display_name, provider_model_id: m.provider_model_id, connection_id: m.connection_id,
+      connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const,
+    }] : [];
   });
 }
 
@@ -107,4 +117,15 @@ export function groupChatsByDate(chats: ChatSummary[], now = new Date()) {
     groups[g]!.items.push(c);
   }
   return groups.filter((g) => g.items.length > 0);
+}
+
+export async function deleteMessage(id: string): Promise<void> {
+  const { error } = await supabase.from("messages").delete().eq("id", id);
+  if (error) throw new Error("Couldn't delete the message.");
+}
+
+/** Deletes the given message and everything after it in the chat (used by edit/regenerate). */
+export async function deleteMessagesFrom(chatId: string, fromCreatedAt: string): Promise<void> {
+  const { error } = await supabase.from("messages").delete().eq("chat_id", chatId).gte("created_at", fromCreatedAt);
+  if (error) throw new Error("Couldn't update the conversation.");
 }

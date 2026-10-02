@@ -68,7 +68,7 @@ function ProfilePage() {
           <ErrorState title="Profile not found" />
         ) : (
           <>
-            <form onSubmit={onSubmit} className="space-y-3 rounded-lg border bg-card p-4">
+            <form onSubmit={onSubmit} className="space-y-4 rounded-lg border bg-card p-5 shadow-sm">
               <Label htmlFor="display-name">Display name</Label>
               <div className="flex gap-2">
                 <Input id="display-name" maxLength={80} required value={name} onChange={(e) => setName(e.target.value)} />
@@ -77,7 +77,7 @@ function ProfilePage() {
                 </Button>
               </div>
             </form>
-            <dl className="divide-y rounded-lg border bg-card text-sm">
+            <dl className="divide-y rounded-lg border bg-card text-sm shadow-sm">
               <Row label="Email"><span className="truncate">{user.email ?? "—"}</span></Row>
               <Row label="Role"><Badge variant={isAdmin ? "default" : "secondary"}>{isAdmin ? "Admin" : "User"}</Badge></Row>
               <Row label="Account status">

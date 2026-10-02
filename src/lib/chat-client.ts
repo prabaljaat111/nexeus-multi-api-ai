@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface StreamState {
@@ -16,7 +16,12 @@ const STREAM_FAILED = "Unable to stream this response. Your message was saved; t
 export function useChatStream(onSettled: () => void, onError: (message: string) => void) {
   const [state, setState] = useState<StreamState>({ messageId: null, pendingUserText: null, text: "", status: "idle" });
   const abortRef = useRef<AbortController | null>(null);
+  const frameRef = useRef<number | null>(null);
   const busy = state.status !== "idle";
+
+  useEffect(() => () => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+  }, []);
 
   const send = useCallback(async (args: SendArgs) => {
     if (abortRef.current) return; // duplicate-submit guard
@@ -58,7 +63,12 @@ export function useChatStream(onSettled: () => void, onError: (message: string) 
           if (payload.messageId) messageId = payload.messageId;
           if (event === "delta" && payload.text) {
             text += payload.text;
-            setState((s) => ({ ...s, messageId, text, status: "streaming" }));
+             if (frameRef.current === null) {
+               frameRef.current = requestAnimationFrame(() => {
+                 frameRef.current = null;
+                 setState((s) => ({ ...s, messageId, text, status: "streaming" }));
+               });
+             }
           } else if (event === "error") {
             onError(payload.message ?? STREAM_FAILED);
           }
@@ -74,6 +84,10 @@ export function useChatStream(onSettled: () => void, onError: (message: string) 
         onError(e instanceof Error && e.message ? e.message : STREAM_FAILED);
       }
     } finally {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
       abortRef.current = null;
       setState({ messageId: null, pendingUserText: null, text: "", status: "idle" });
       onSettled();

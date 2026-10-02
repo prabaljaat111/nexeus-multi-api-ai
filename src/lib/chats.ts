@@ -46,7 +46,7 @@ export const chatKeys = {
 
 export async function listChats(): Promise<ChatSummary[]> {
   const { data, error } = await supabase.from("chats").select("id, title, updated_at")
-    .eq("is_archived", false).order("updated_at", { ascending: false }).limit(500);
+    .eq("is_archived", false).order("updated_at", { ascending: false }).limit(200);
   if (error) throw new Error("Couldn't load your chats.");
   return data;
 }

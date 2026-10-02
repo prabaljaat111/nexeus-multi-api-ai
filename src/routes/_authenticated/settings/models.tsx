@@ -81,8 +81,8 @@ function ModelsPage() {
   return (
     <>
       <PageHeader title="Models" description="Models fetched from your connections" />
-      <div className="space-y-4 p-4">
-        <div className="relative">
+      <div className="mx-auto w-full max-w-6xl space-y-5 p-4 sm:p-6">
+        <div className="relative max-w-xl">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input className="pl-8" placeholder="Search models" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search models" />
         </div>
@@ -97,7 +97,7 @@ function ModelsPage() {
           <EmptyState icon={Search} title="No matching models" description="Try a different search." />
         ) : (
           groups.map(([cid, g]) => (
-            <section key={cid} className="rounded-lg border">
+            <section key={cid} className="overflow-hidden rounded-lg border bg-card shadow-sm">
               <header className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
                 <span className="font-medium">{g.conn?.name ?? "Connection"}</span>
                 <Badge variant="secondary">{providerLabel(g.conn?.provider_type)}</Badge>
@@ -106,7 +106,7 @@ function ModelsPage() {
               </header>
               <ul className="divide-y">
                 {g.items.map((m) => (
-                  <li key={m.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <li key={m.id} className="flex min-h-14 items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{m.display_name}</p>
                       <p className="truncate font-mono text-xs text-muted-foreground">

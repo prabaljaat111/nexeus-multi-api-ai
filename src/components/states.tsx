@@ -22,7 +22,7 @@ interface ErrorStateProps {
 export function ErrorState({ title = "Something went wrong", message, onRetry, className }: ErrorStateProps) {
   return (
     <div role="alert" className={cn("flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center", className)}>
-      <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+      <div className="flex size-10 items-center justify-center rounded-lg border border-destructive/20 bg-destructive/10 text-destructive">
         <AlertTriangle className="size-5" aria-hidden />
       </div>
       <div>
@@ -49,7 +49,7 @@ interface EmptyStateProps {
 export function EmptyState({ icon: Icon = Inbox, title, description, action, className }: EmptyStateProps) {
   return (
     <div className={cn("flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center", className)}>
-      <div className="flex size-12 items-center justify-center rounded-xl border bg-muted text-muted-foreground">
+      <div className="flex size-12 items-center justify-center rounded-lg border bg-muted/60 text-primary">
         <Icon className="size-5" aria-hidden />
       </div>
       <div>

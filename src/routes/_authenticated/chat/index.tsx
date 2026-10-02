@@ -33,7 +33,7 @@ function ChatHome() {
   return (
     <>
       <PageHeader title="Chat" />
-      <EmptyState
+      <EmptyState className="min-h-[calc(100svh-3.5rem)]"
         icon={MessageSquare}
         title="Start a conversation"
         description="Create a new chat, or pick one from the sidebar. To use a model, add a provider in Settings → Connections and click “Fetch models”."

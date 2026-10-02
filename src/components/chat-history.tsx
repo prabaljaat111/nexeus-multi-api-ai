@@ -50,7 +50,7 @@ export function ChatHistory() {
     <>
       <div className="relative px-2 pt-2">
         <Search className="absolute left-4 top-1/2 mt-1 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <Input id="chat-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats" className="h-8 pl-7 text-sm" aria-label="Search chats" />
+        <Input id="chat-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats" className="h-8 bg-sidebar-accent/30 pl-7 text-sm shadow-none" aria-label="Search chats" />
       </div>
       {chats.isPending ? (
         <SidebarGroup><SidebarMenu>{Array.from({ length: 4 }).map((_, i) => <SidebarMenuItem key={i}><SidebarMenuSkeleton /></SidebarMenuItem>)}</SidebarMenu></SidebarGroup>

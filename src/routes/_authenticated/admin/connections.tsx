@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/admin/connections")({
   component: () => (
     <>
       <PageHeader title="Workspace connections" description="Admin · shared AI providers available to all approved users" />
-      <div className="p-4"><ConnectionsManager scope="global" canEdit /></div>
+      <div className="mx-auto w-full max-w-6xl p-4 sm:p-6"><ConnectionsManager scope="global" canEdit /></div>
     </>
   ),
 });

@@ -103,7 +103,7 @@ export function ConnectionsManager({ scope, canEdit }: { scope: Scope; canEdit: 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {canEdit && (
         <div className="flex justify-end">
           <Button size="sm" onClick={() => setEditing("new")}><Plus className="size-4" /> Add connection</Button>
@@ -120,9 +120,9 @@ export function ConnectionsManager({ scope, canEdit }: { scope: Scope; canEdit: 
           description={canEdit ? "Add a provider API key. It's encrypted on the server and never shown again." : "An administrator hasn't shared any connections yet."}
         />
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="grid gap-3 lg:grid-cols-2">
           {list.data.map((c) => (
-            <li key={c.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+            <li key={c.id} className="flex min-w-0 flex-col gap-4 rounded-lg border bg-card p-4 shadow-sm">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{c.name}</span>
@@ -143,14 +143,15 @@ export function ConnectionsManager({ scope, canEdit }: { scope: Scope; canEdit: 
                 </p>
               </div>
               {canEdit && (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 border-t pt-3">
                   <Button size="sm" variant="outline" disabled={testM.isPending && testM.variables === c.id} onClick={() => testM.mutate(c.id)}>
                     {testM.isPending && testM.variables === c.id ? <Loader2 className="size-4 animate-spin" /> : <PlugZap className="size-4" />} Test connection
                   </Button>
                   <Button size="sm" variant="outline" disabled={fetchM.isPending && fetchM.variables === c.id} onClick={() => fetchM.mutate(c.id)}>
                     {fetchM.isPending && fetchM.variables === c.id ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />} Fetch models
                   </Button>
-                  <Switch checked={c.enabled} disabled={toggle.isPending} onCheckedChange={() => toggle.mutate(c)} aria-label={c.enabled ? "Disable connection" : "Enable connection"} />
+                   <span className="ml-auto text-xs text-muted-foreground">Enabled</span>
+                   <Switch checked={c.enabled} disabled={toggle.isPending} onCheckedChange={() => toggle.mutate(c)} aria-label={c.enabled ? "Disable connection" : "Enable connection"} />
                   <Button size="icon" variant="ghost" onClick={() => setEditing(c)} aria-label="Edit"><Pencil className="size-4" /></Button>
                   <ConfirmDialog
                     trigger={<Button size="icon" variant="ghost" aria-label="Delete"><Trash2 className="size-4" /></Button>}

@@ -1,6 +1,6 @@
 # Unified AI Workspace
 
-A multi-provider AI chat workspace, inspired by Open WebUI. **Phase 1 is the foundation only:** auth, app shell, theming, route guards and shared UI states.
+A secure multi-provider AI chat workspace with encrypted provider connections, real model discovery, streaming conversations, access controls, and a unified responsive interface.
 
 ## Stack
 TanStack Start (React 19, Vite, TanStack Router + Query), Tailwind v4, shadcn/ui, Lucide, Lovable Cloud (Postgres, Auth, RLS), react-markdown + remark-gfm + remark-math + rehype-highlight + rehype-katex.
@@ -80,6 +80,15 @@ Privileged mutations run in authenticated server functions (`src/lib/admin-users
 - `POST /api/chat-completion` (`src/routes/api/chat-completion.ts`) is the only code path that calls AI providers for chat. It verifies the bearer token, active/approved status, chat ownership, model visibility/enabled connection; applies a 20 responses/min per-user limit, one in-flight stream per chat, prompt-size limits, and `requestId` idempotency (`messages.client_request_id`).
 - Adapters (`src/lib/chat-stream.server.ts`): OpenAI/OpenRouter/OpenAI-compatible Chat Completions, Anthropic Messages, Gemini `streamGenerateContent`. 60s connect timeout and 120s idle timeout. Emits SSE `delta`, `complete`, `error` with friendly messages only.
 - Lifecycle: user message saved → assistant row `streaming` → content accumulated server-side → `complete` / `stopped` / `error`. Stop also saves the partial text from the browser as a fallback.
+
+## Performance decisions
+- TanStack Start's file-based route splitting keeps settings and admin pages out of the initial public and chat bundles. Homepage sections below the first viewport are loaded with `React.lazy` and a stable skeleton fallback.
+- The previous full-screen remote video and poster were removed. The homepage now uses lightweight SVG and CSS interface visuals, including one reusable SVG brand mark and SVG favicon.
+- TanStack Query uses a 30-second freshness window, five-minute garbage collection, one retry, and no automatic focus refetch. Existing mutations still invalidate their affected query keys.
+- Chat history is bounded to the 200 most recently updated active chats, using the existing `(user_id, is_archived, updated_at desc)` index. Messages remain fetched only for the selected chat using the existing `(chat_id, created_at)` index.
+- Streaming text updates are batched to the browser's animation frame. Stable markdown and message surfaces are memoized so completed content avoids unnecessary work during token delivery.
+- Motion is short and purposeful, and the global reduced-motion rule disables non-essential animation and smooth scrolling when requested.
+- No extra database indexes were added: the current chat, message, model, connection, and idempotency query shapes are already covered.
 
 ## Deployment readiness (Phase 1)
 

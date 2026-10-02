@@ -123,9 +123,9 @@ function ChatSettings({ chat, onSave }: { chat: ChatDetail; onSave: (p: ChatPatc
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const t = Number(temp), p = Number(topP), mt = maxTokens.trim() ? Number(maxTokens) : null;
-    if (!Number.isFinite(t) || t < 0 || t > 2) return notify.error("Temperature must be between 0 and 2.");
-    if (!Number.isFinite(p) || p <= 0 || p > 1) return notify.error("Top P must be greater than 0 and at most 1.");
-    if (mt !== null && (!Number.isInteger(mt) || mt < 1 || mt > 1_000_000)) return notify.error("Max tokens must be a whole number between 1 and 1,000,000.");
+    if (!Number.isFinite(t) || t < 0 || t > 2) { notify.error("Temperature must be between 0 and 2."); return; }
+    if (!Number.isFinite(p) || p <= 0 || p > 1) { notify.error("Top P must be greater than 0 and at most 1."); return; }
+    if (mt !== null && (!Number.isInteger(mt) || mt < 1 || mt > 1_000_000)) { notify.error("Max tokens must be a whole number between 1 and 1,000,000."); return; }
     void onSave({ system_prompt: prompt.trim() ? prompt.slice(0, 20000) : null, temperature: t, top_p: p, max_tokens: mt }).then(() => setOpen(false), () => undefined);
   }
 

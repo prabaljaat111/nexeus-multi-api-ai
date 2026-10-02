@@ -92,7 +92,7 @@ export function validateBaseUrl(raw: string): string {
     throw new Error("Base URL is not a valid URL.");
   }
   if (url.username || url.password) throw new Error("Base URL must not contain credentials.");
-  const allowLocal = process.env["ALLOW_LOCAL_PROVIDER_ENDPOINTS"] === "true";
+  const allowLocal = process.env["ALLOW_LOCAL_PROVIDER_ENDPOINTS"] === "true" || process.env["ALLOW_LOCAL_PROVIDER_URLS"] === "true";
   const host = url.hostname.toLowerCase();
 
   if (!allowLocal) {

@@ -80,3 +80,31 @@ Privileged mutations run in authenticated server functions (`src/lib/admin-users
 - `POST /api/chat-completion` (`src/routes/api/chat-completion.ts`) is the only code path that calls AI providers for chat. It verifies the bearer token, active/approved status, chat ownership, model visibility/enabled connection; applies a 20 responses/min per-user limit, one in-flight stream per chat, prompt-size limits, and `requestId` idempotency (`messages.client_request_id`).
 - Adapters (`src/lib/chat-stream.server.ts`): OpenAI/OpenRouter/OpenAI-compatible Chat Completions, Anthropic Messages, Gemini `streamGenerateContent`. 60s connect timeout and 120s idle timeout. Emits SSE `delta`, `complete`, `error` with friendly messages only.
 - Lifecycle: user message saved → assistant row `streaming` → content accumulated server-side → `complete` / `stopped` / `error`. Stop also saves the partial text from the browser as a fallback.
+
+## Deployment readiness (Phase 1)
+
+### Secrets
+- `CONNECTION_ENCRYPTION_KEY` — already generated; AES-256-GCM key for provider keys. Never rotate without re-entering every connection key.
+- `APP_ORIGIN` — optional, comma-separated extra origins (e.g. a custom domain) allowed to call `/api/chat-completion`. The app's own origin is always allowed; no CORS headers are sent, so there is never a wildcard.
+- `ALLOW_LOCAL_PROVIDER_URLS` (or `ALLOW_LOCAL_PROVIDER_ENDPOINTS`) = `true` — local development only; allows http/localhost/private provider URLs. Never set in production.
+
+### Google OAuth & redirect URLs
+Google uses Lovable Cloud's managed credentials by default. To use your own: Cloud → Users → Auth Settings → Google, and add the callback URL shown there to your Google client. Allowed redirect URLs: your preview URL, published `*.lovable.app` URL and any custom domain, each with `/auth/callback` and `/reset-password`.
+
+### Custom domain
+After connecting a domain, add it to the auth redirect URLs and to `APP_ORIGIN`.
+
+### First admin & approval
+The first account to sign up becomes an approved admin. Everyone else waits on /disabled until an admin approves them in Admin → Users.
+
+### Testing a provider
+Settings → Connections → add a key → "Test connection" (expect "Connected") → "Fetch models" → pick the model in a chat.
+
+### How key encryption works
+Keys are encrypted on the server (AES-256-GCM, random IV, `v1:iv:ciphertext`) before storage. The `encrypted_api_key` column has no client grants, keys are decrypted only inside server handlers right before a provider call, and only a `…abcd` hint is ever returned.
+
+### Phase 1 features
+Auth (email + Google), approval workflow, roles, admin users, encrypted personal/shared connections, connection test, real model discovery, chat history, streaming chat with stop/regenerate/edit/delete, model selector, markdown/code/math, per-chat settings, command palette, themes.
+
+### Deferred (Phase 2/3)
+Compare mode, file uploads, RAG/knowledge, image generation, voice, branching/version history, usage/cost dashboards, account-deletion cleanup.

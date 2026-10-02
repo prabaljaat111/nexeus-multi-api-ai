@@ -58,6 +58,13 @@ export const Route = createFileRoute("/api/chat-completion")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // --- Origin allow-list (no CORS headers are ever sent, so no wildcard) ---
+        const origin = request.headers.get("origin");
+        if (origin) {
+          const allowed = new Set([new URL(request.url).origin]);
+          (process.env["APP_ORIGIN"] ?? "").split(",").map((o) => o.trim()).filter(Boolean).forEach((o) => allowed.add(o));
+          if (!allowed.has(origin)) return json(403, "forbidden_origin", "This origin is not allowed.");
+        }
         // --- Auth ---
         const auth = request.headers.get("authorization") ?? "";
         const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";

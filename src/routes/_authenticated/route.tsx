@@ -10,10 +10,11 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) throw redirect({ to: "/login", search: { redirect: location.href } });
 
     const [{ data: profile }, { data: isAdmin }] = await Promise.all([
-      supabase.from("profiles").select("is_disabled").eq("id", data.user.id).maybeSingle(),
-      supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" }),
+      supabase.from("profiles").select("is_disabled, is_approved").eq("id", data.user.id).maybeSingle(),
+      supabase.rpc("is_admin"),
     ]);
-    if (profile?.is_disabled) throw redirect({ to: "/disabled" });
+    if (!profile || profile.is_disabled) throw redirect({ to: "/disabled", search: { reason: "disabled" } });
+    if (!profile.is_approved) throw redirect({ to: "/disabled", search: { reason: "pending" } });
 
     return { user: data.user, isAdmin: isAdmin === true };
   },

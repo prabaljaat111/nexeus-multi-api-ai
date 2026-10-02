@@ -26,7 +26,10 @@ export interface ChatMessage {
   created_at: string;
   model_id: string | null;
   model_label: string | null;
+  citations: MessageCitations | null;
 }
+
+export interface MessageCitations { sources: { attachmentId: string; filename: string; label: string | null }[]; truncated: string[] }
 
 export interface SelectableModel {
   id: string;
@@ -64,7 +67,7 @@ export async function getChat(id: string): Promise<ChatDetail | null> {
 
 export async function listMessages(chatId: string): Promise<ChatMessage[]> {
   const { data, error } = await supabase.from("messages")
-    .select("id, role, content, status, error_message, created_at, model_id, models(display_name, connections(name))")
+    .select("id, role, content, status, error_message, created_at, model_id, citations, models(display_name, connections(name))")
     .eq("chat_id", chatId).order("created_at", { ascending: true });
   if (error) throw new Error("Couldn't load messages.");
   return data.map(({ models, ...m }) => {

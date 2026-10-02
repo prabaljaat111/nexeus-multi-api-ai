@@ -18,6 +18,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as ApiChatCompletionRouteImport } from './routes/api/chat-completion'
+import { Route as ApiCodeGenerationRouteImport } from './routes/api/code-generation'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedAdminConnectionsRouteImport } from './routes/_authenticated/admin/connections'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
@@ -69,6 +70,11 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
 const ApiChatCompletionRoute = ApiChatCompletionRouteImport.update({
   id: '/api/chat-completion',
   path: '/api/chat-completion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCodeGenerationRoute = ApiCodeGenerationRouteImport.update({
+  id: '/api/code-generation',
+  path: '/api/code-generation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/api/chat-completion': typeof ApiChatCompletionRoute
+  '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/api/chat-completion': typeof ApiChatCompletionRoute
+  '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/api/chat-completion': typeof ApiChatCompletionRoute
+  '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/admin/connections': typeof AuthenticatedAdminConnectionsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/api/chat-completion'
+    | '/api/code-generation'
     | '/auth/callback'
     | '/admin/connections'
     | '/admin/users'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/api/chat-completion'
+    | '/api/code-generation'
     | '/auth/callback'
     | '/admin/connections'
     | '/admin/users'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/admin'
     | '/api/chat-completion'
+    | '/api/code-generation'
     | '/auth/callback'
     | '/_authenticated/admin/connections'
     | '/_authenticated/admin/users'
@@ -239,6 +251,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   ApiChatCompletionRoute: typeof ApiChatCompletionRoute
+  ApiCodeGenerationRoute: typeof ApiCodeGenerationRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat-completion'
       fullPath: '/api/chat-completion'
       preLoaderRoute: typeof ApiChatCompletionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/code-generation': {
+      id: '/api/code-generation'
+      path: '/api/code-generation'
+      fullPath: '/api/code-generation'
+      preLoaderRoute: typeof ApiCodeGenerationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
@@ -412,6 +432,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   ApiChatCompletionRoute: ApiChatCompletionRoute,
+  ApiCodeGenerationRoute: ApiCodeGenerationRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport

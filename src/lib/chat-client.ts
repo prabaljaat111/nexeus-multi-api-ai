@@ -8,7 +8,7 @@ export interface StreamState {
   status: "idle" | "submitted" | "streaming";
 }
 
-export interface SendArgs { chatId: string; modelId: string; message?: string; regenerate?: boolean }
+export interface SendArgs { chatId: string; modelId: string; message?: string; regenerate?: boolean; attachmentIds?: string[] }
 
 const STREAM_FAILED = "Unable to stream this response. Your message was saved; try regenerating.";
 

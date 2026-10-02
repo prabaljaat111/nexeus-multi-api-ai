@@ -1,7 +1,7 @@
 // Server-only helpers for provider connections: encryption and endpoint validation.
 // Never import from client code.
 
-export const PROVIDER_TYPES = ["openai", "anthropic", "gemini", "openrouter", "openai_compatible"] as const;
+export const PROVIDER_TYPES = ["openai", "anthropic", "gemini", "openrouter", "openai_compatible", "stability", "flux"] as const;
 export type ProviderType = (typeof PROVIDER_TYPES)[number];
 
 export const DEFAULT_BASE_URLS: Record<Exclude<ProviderType, "openai_compatible">, string> = {
@@ -9,6 +9,8 @@ export const DEFAULT_BASE_URLS: Record<Exclude<ProviderType, "openai_compatible"
   anthropic: "https://api.anthropic.com",
   gemini: "https://generativelanguage.googleapis.com",
   openrouter: "https://openrouter.ai/api/v1",
+  stability: "https://api.stability.ai",
+  flux: "https://api.bfl.ai",
 };
 
 const PAYLOAD_VERSION = "v1";

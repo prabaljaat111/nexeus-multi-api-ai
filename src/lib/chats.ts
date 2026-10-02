@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isImageCaps, type ImageCapabilities } from "@/lib/image-catalog";
 
 export interface ChatSummary {
   id: string;
@@ -42,6 +43,8 @@ export const chatKeys = {
   detail: (id: string) => ["chats", "detail", id] as const,
   messages: (id: string) => ["chats", "messages", id] as const,
   selectableModels: ["models", "selectable"] as const,
+  imageModels: ["models", "image"] as const,
+  imageJobs: (id: string) => ["image-jobs", id] as const,
 };
 
 export async function listChats(): Promise<ChatSummary[]> {
@@ -90,14 +93,32 @@ export async function deleteChat(id: string): Promise<void> {
 }
 
 /** Enabled models from enabled connections visible to the user (RLS-scoped). */
-export async function listSelectableModels(): Promise<SelectableModel[]> {
+export interface ImageModel extends SelectableModel { caps: ImageCapabilities }
+
+async function loadModels() {
   const { data, error } = await supabase.from("models")
-    .select("id, display_name, provider_model_id, connection_id, connections(name, enabled, provider_type, scope)")
+    .select("id, display_name, provider_model_id, connection_id, capabilities, connections(name, enabled, provider_type, scope)")
     .eq("enabled", true).order("display_name");
   if (error) throw new Error("Couldn't load models.");
+  return data;
+}
+
+/** Image-generation models (verified capability metadata only). */
+export async function listImageModels(): Promise<ImageModel[]> {
+  return (await loadModels()).flatMap((m) => {
+    const c = m.connections as { name: string; enabled: boolean; provider_type: string; scope: string } | null;
+    return c?.enabled && isImageCaps(m.capabilities) ? [{
+      id: m.id, display_name: m.display_name, provider_model_id: m.provider_model_id, connection_id: m.connection_id,
+      connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const, caps: m.capabilities,
+    }] : [];
+  });
+}
+
+export async function listSelectableModels(): Promise<SelectableModel[]> {
+  const data = await loadModels();
   return data.flatMap((m) => {
     const c = m.connections as { name: string; enabled: boolean; provider_type: string; scope: string } | null;
-    return c?.enabled ? [{
+    return c?.enabled && !isImageCaps(m.capabilities) ? [{
       id: m.id, display_name: m.display_name, provider_model_id: m.provider_model_id, connection_id: m.connection_id,
       connection_name: c.name, provider_type: c.provider_type, scope: c.scope === "global" ? "global" as const : "personal" as const,
     }] : [];

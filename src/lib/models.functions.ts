@@ -1,3 +1,4 @@
+import type { Json } from "@/integrations/supabase/types";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -75,7 +76,7 @@ export const fetchConnectionModels = createServerFn({ method: "POST" })
       connection_id: conn.id,
       provider_model_id: m.provider_model_id.slice(0, 300),
       display_name: m.display_name.slice(0, 300),
-      capabilities: m.capabilities,
+      capabilities: m.capabilities as Json,
       context_window: m.context_window,
       fetched_at: now,
       updated_at: now,

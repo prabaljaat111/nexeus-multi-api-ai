@@ -50,6 +50,13 @@
       "when": 1790966004604,
       "tag": "0006_messages_request_id",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790966383918,
+      "tag": "0007_harden_function_execute",
+      "breakpoints": true
     }
   ]
 }

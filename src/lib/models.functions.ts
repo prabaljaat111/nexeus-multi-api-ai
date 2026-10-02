@@ -78,6 +78,9 @@ export const fetchConnectionModels = createServerFn({ method: "POST" })
       display_name: m.display_name.slice(0, 300),
       capabilities: m.capabilities as Json,
       context_window: m.context_window,
+      max_output_tokens: m.max_output_tokens ?? null,
+      supports_tool_calls: m.supports_tool_calls ?? null,
+      supports_structured_output: m.supports_structured_output ?? null,
       fetched_at: now,
       updated_at: now,
     }));

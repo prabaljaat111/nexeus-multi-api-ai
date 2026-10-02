@@ -86,5 +86,5 @@ export const getToolRunStatus = createServerFn({ method: "POST" })
     const { data: run } = await context.supabase.from("tool_runs").select("id, tool_name, status, output_summary, error_message, updated_at")
       .eq("id", data.id).eq("user_id", context.userId).maybeSingle();
     if (!run) throw new Error("Tool run not found.");
-    return { id: run.id, tool: run.tool_name, status: run.status, error: run.error_message, output: run.output_summary as Record<string, unknown> };
+    return { id: run.id, tool: run.tool_name, status: run.status, error: run.error_message, output: JSON.parse(JSON.stringify(run.output_summary ?? {})) as Record<string, string | number | boolean | null> };
   });

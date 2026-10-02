@@ -148,7 +148,7 @@ export const Route = createFileRoute("/api/chat-completion")({
         if (input.regenerate) {
           while (ordered.length && ordered[ordered.length - 1]!.role === "assistant") ordered = ordered.slice(0, -1);
         }
-        const history: { role: "user" | "assistant"; content: string }[] = [];
+        const history: { role: "user" | "assistant"; content: string; images?: { mime: string; b64: string }[] | undefined }[] = [];
         let total = 0;
         for (let i = ordered.length - 1; i >= 0 && history.length < MAX_HISTORY_MESSAGES; i--) {
           const m = ordered[i]!;

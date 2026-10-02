@@ -156,7 +156,7 @@ async function docx(bytes: Uint8Array, b: Builder) {
 
 async function pdf(bytes: Uint8Array, b: Builder) {
   const { getDocumentProxy, extractText } = await import("unpdf");
-  const doc = await getDocumentProxy(bytes, { isEvalSupported: false, disableFontFace: true, useSystemFonts: false });
+  const doc = await getDocumentProxy(bytes, { disableFontFace: true, useSystemFonts: false });
   const pages = doc.numPages;
   const { text } = await extractText(doc, { mergePages: false });
   const list = (Array.isArray(text) ? text : [text]).slice(0, MAX_PDF_PAGES);

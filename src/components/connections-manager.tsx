@@ -133,7 +133,9 @@ export function ConnectionsManager({ scope, canEdit }: { scope: Scope; canEdit: 
   );
 }
 
-type SaveInput = Parameters<typeof upsertConnection>[0]["data"];
+type SaveInput = {
+  id?: string; scope: Scope; name: string; providerType: ProviderValue; baseUrl?: string; apiKey?: string; enabled: boolean;
+};
 
 function ConnectionDialog({ scope, initial, onClose, onSaved, save }: {
   scope: Scope; initial: ConnectionRow | null; onClose: () => void; onSaved: () => void; save: (d: SaveInput) => Promise<unknown>;

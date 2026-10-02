@@ -117,6 +117,27 @@ export const Route = createFileRoute("/api/chat-completion")({
           if (ok.length !== attachmentIds.length) return json(400, "bad_attachment", "One or more attachments are unavailable. Remove them and try again.");
         }
 
+        // --- Selected file context (analysis + vision), validated before anything is streamed ---
+        const contextIds = [...new Set(input.contextAttachmentIds ?? [])];
+        let analysis: Awaited<ReturnType<typeof import("@/lib/analysis-context.server").buildAnalysisContext>> | null = null;
+        let toolRunId: string | null = null;
+        if (contextIds.length) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { buildAnalysisContext, AnalysisError } = await import("@/lib/analysis-context.server");
+          const caps = model.capabilities as Record<string, unknown> | null;
+          try {
+            analysis = await buildAnalysisContext(supabaseAdmin, userId, chat.id, contextIds, caps?.["vision"] === true);
+          } catch (e) {
+            if (e instanceof AnalysisError) return json(400, e.code, e.message);
+            console.error("analysis context failure");
+            return json(500, "analysis_failed", "Couldn't prepare the selected files. Please try again.");
+          }
+          const { data: run } = await supabaseAdmin.from("tool_runs").insert({
+            user_id: userId, chat_id: chat.id, tool_name: "analyze_attachments", status: "running",
+            input_summary: { files: analysis.docCount, images: analysis.imageCount, truncated: analysis.truncatedFiles.length },
+          }).select("id").single();
+          toolRunId = run?.id ?? null;
+        }
         // --- Persist user message (idempotent by requestId) ---
         const { count: priorUser } = await sb.from("messages").select("id", { count: "exact", head: true }).eq("chat_id", chat.id).eq("role", "user");
         if (!input.regenerate) {
@@ -159,29 +180,7 @@ export const Route = createFileRoute("/api/chat-completion")({
         while (history.length && history[0]!.role !== "user") history.shift();
         if (!history.length || history[history.length - 1]!.role !== "user") return json(400, "nothing_to_answer", "There's no message to respond to.");
 
-        // --- Selected file context (analysis + vision), validated before anything is streamed ---
-        const contextIds = [...new Set(input.contextAttachmentIds ?? [])];
-        let analysis: Awaited<ReturnType<typeof import("@/lib/analysis-context.server").buildAnalysisContext>> | null = null;
-        let toolRunId: string | null = null;
-        if (contextIds.length) {
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const { buildAnalysisContext, AnalysisError } = await import("@/lib/analysis-context.server");
-          const caps = model.capabilities as Record<string, unknown> | null;
-          try {
-            analysis = await buildAnalysisContext(supabaseAdmin, userId, chat.id, contextIds, caps?.["vision"] === true);
-          } catch (e) {
-            if (e instanceof AnalysisError) return json(400, e.code, e.message);
-            console.error("analysis context failure");
-            return json(500, "analysis_failed", "Couldn't prepare the selected files. Please try again.");
-          }
-          const lastUser = history[history.length - 1]!;
-          if (analysis.vision.length) lastUser.images = analysis.vision;
-          const { data: run } = await supabaseAdmin.from("tool_runs").insert({
-            user_id: userId, chat_id: chat.id, tool_name: "analyze_attachments", status: "running",
-            input_summary: { files: analysis.docCount, images: analysis.imageCount, truncated: analysis.truncatedFiles.length },
-          }).select("id").single();
-          toolRunId = run?.id ?? null;
-        }
+        if (analysis?.vision.length) history[history.length - 1]!.images = analysis.vision;
         const citations = analysis?.citations.length
           ? (JSON.parse(JSON.stringify({ sources: analysis.citations, truncated: analysis.truncatedFiles })) as NonNullable<Database["public"]["Tables"]["messages"]["Insert"]["citations"]>) : null;
 

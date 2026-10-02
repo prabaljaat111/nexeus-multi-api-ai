@@ -35,7 +35,7 @@ export function CodingChat(props: {
 }) {
   const [text, setText] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (props.prefill) { setText(props.prefill); props.onPrefillUsed(); } }, [props.prefill, props]);
+  useEffect(() => { if (props.prefill) { setText(props.prefill); props.onPrefillUsed(); } }, [props.prefill]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { scroller.current?.scrollTo({ top: scroller.current.scrollHeight }); }, [props.runs.length, props.live.active]);
 
   const submit = () => { const t = text.trim(); if (!t || props.live.active || props.disabled) return; props.onSend(t); setText(""); };

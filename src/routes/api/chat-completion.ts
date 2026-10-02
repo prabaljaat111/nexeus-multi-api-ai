@@ -183,7 +183,7 @@ export const Route = createFileRoute("/api/chat-completion")({
           toolRunId = run?.id ?? null;
         }
         const citations = analysis?.citations.length
-          ? { sources: analysis.citations, truncated: analysis.truncatedFiles } : null;
+          ? (JSON.parse(JSON.stringify({ sources: analysis.citations, truncated: analysis.truncatedFiles })) as Database["public"]["Tables"]["messages"]["Insert"]["citations"]) : null;
 
         // --- Assistant placeholder ---
         const { data: assistant, error: aErr } = await sb.from("messages")

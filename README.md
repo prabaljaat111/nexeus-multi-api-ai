@@ -172,3 +172,12 @@ Compare mode, file uploads, RAG/knowledge, image generation, voice, branching/ve
 **Manual QA checklist:** sign up second account → pending screen; approve in /admin/users; disable → blocked; add connection → Test → Fetch models; chat stream + Stop + Regenerate; upload file, ask about it, check Sources; generate image (needs OpenAI/Stability/FLUX) and an XLSX; try a 51 MB file (refused); check phone width.
 
 **Deferred / known limits:** no virus scanning; PDFs limited to Western European characters; OpenAI/Stability image jobs can't be cancelled upstream; OpenAI-compatible endpoints can't be marked image-capable; scanned PDFs and PPTX are not analysed; no compliance certifications.
+
+## Block 15 — AI Coding Workspace (`/build`)
+
+- Projects, files, versions, runs and change sets live in the database; browsers can only read their own rows. All writes go through authenticated server functions that validate paths, size limits and secret patterns.
+- AI generation runs only in the `/api/code-generation` server route (same-origin check, approval, ownership, model visibility). Output is saved periodically; if a model stops at its length limit, the run is resumed automatically (or manually) and repeated content is detected.
+- The model proposes changes; nothing is written until the user reviews the diff and applies it. Every apply creates a version snapshot that can be restored.
+- Live preview is built in the browser and runs in a sandboxed iframe with no access to the app, the session or cookies. React projects load packages from esm.sh, so preview needs internet access.
+- ZIP export contains the project files plus a generated README.
+- Limits: 2 MB per project, preview supports static HTML and React (no Node/server code, no npm install).

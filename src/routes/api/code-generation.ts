@@ -191,7 +191,7 @@ export const Route = createFileRoute("/api/code-generation")({
               const { ChatStreamError, FRIENDLY_ERRORS } = await import("@/lib/chat-stream.server");
               const code = e instanceof ChatStreamError ? e.code : "stream_failed";
               const message = FRIENDLY_ERRORS[code];
-              console.error("code generation failed", code);
+              console.error("code generation failed", code, e instanceof Error ? e.message.slice(0, 300) : "");
               await sa.from("code_generation_runs").update({ output: out, status: out ? "stopped" : "failed", finish_reason: out ? "interrupted" : null, error_message: message, updated_at: new Date().toISOString() }).eq("id", runId);
               send("error", { code, message });
             } finally {

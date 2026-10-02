@@ -205,7 +205,7 @@ function Workspace() {
   ) : <EmptyState title="No file selected" description="Pick a file from the tree." />;
 
   const preview = (
-    <PreviewPane framework={p.framework} files={fileList} buildKey={buildKey + (files.dataUpdatedAt ? 0 : 0)} onConsole={onConsole}
+    <PreviewPane framework={p.framework} files={fileList} buildKey={buildKey + files.dataUpdatedAt} onConsole={onConsole}
       fullscreen={fullscreen} onToggleFullscreen={() => setFullscreen((f) => !f)} />
   );
 

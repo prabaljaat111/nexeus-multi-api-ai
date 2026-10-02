@@ -65,3 +65,8 @@ Privileged mutations run in authenticated server functions (`src/lib/admin-users
 - Writes go through authenticated server functions `upsertConnection` / `deleteConnection` (`src/lib/connections.functions.ts`): verify session token + `is_active_approved_user()`, `is_admin()` for global scope, Zod validation, AES-256-GCM encryption (`v1:<iv>:<ciphertext>`), masked hint `…abcd`.
 - Secret `CONNECTION_ENCRYPTION_KEY` (generated, already set). Rotating it makes existing keys undecryptable — users must re-enter them.
 - Custom base URLs (OpenAI-compatible only) must be HTTPS public hosts; localhost/private/link-local/metadata addresses are rejected unless the server secret `ALLOW_LOCAL_PROVIDER_ENDPOINTS=true` is set (development only). Standard providers use server-side default URLs.
+
+## Connection testing & model discovery
+- Server functions `testConnection` / `fetchConnectionModels` (`src/lib/models.functions.ts`): verify session + `is_active_approved_user()` + `can_manage_connection()`, decrypt the key server-side only, call the provider with a 15s timeout and no redirects, and map failures to: Connected, Unauthorized key, Invalid endpoint, Provider timed out, Rate limited, Provider unavailable. Raw provider responses are never returned.
+- Endpoints: OpenAI/OpenAI-compatible `GET /models`, OpenRouter `GET /models` (test uses `/key`), Anthropic `GET /v1/models`, Gemini `GET /v1beta/models`.
+- `models` table: upserted per connection; existing `enabled` values are preserved. Only reliable fields are stored (context window/capabilities where the provider supplies them). Users can only update `enabled`, via RLS (owner for personal, admin for global).

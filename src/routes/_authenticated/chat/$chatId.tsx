@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useChatStream, type StreamState } from "@/lib/chat-client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Bot, SearchX, SendHorizontal, SlidersHorizontal } from "lucide-react";
+import { AlertCircle, Bot, Loader2, RotateCcw, SearchX, SendHorizontal, SlidersHorizontal, Square } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState, ErrorState } from "@/components/states";
 import { Markdown } from "@/components/markdown";
@@ -45,6 +46,14 @@ function ChatThread() {
     onError: (e) => notify.fromError(e),
   });
 
+  const onSettled = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: chatKeys.messages(chatId) });
+    void qc.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
+    void qc.invalidateQueries({ queryKey: chatKeys.list });
+  }, [qc, chatId]);
+  const onStreamError = useCallback((m: string) => notify.error(m), []);
+  const stream = useChatStream(onSettled, onStreamError);
+
   if (chat.isPending) {
     return (<><PageHeader title="Loading…" /><div className="space-y-3 p-6"><Skeleton className="h-16 w-2/3" /><Skeleton className="ml-auto h-12 w-1/2" /></div></>);
   }
@@ -75,9 +84,12 @@ function ChatThread() {
         }
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <MessageList query={messages} hasModels={(models.data?.length ?? 0) > 0} />
+        <MessageList query={messages} hasModels={(models.data?.length ?? 0) > 0} stream={stream.state}
+          onRegenerate={selectedModel && !stream.busy ? () => void stream.send({ chatId, modelId: selectedModel.id, regenerate: true }) : undefined} />
       </div>
-      <Composer disabled={!selectedModel} hint={!models.data?.length ? "No models available — fetch models in Settings → Connections." : !selectedModel ? "Select a model to start chatting." : "Sending messages arrives in the next phase."} />
+      <Composer disabled={!selectedModel} busy={stream.busy} onStop={stream.stop}
+        onSend={(text) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text }); }}
+        hint={!models.data?.length ? "No models available — fetch models in Settings → Connections." : !selectedModel ? "Select a model to start chatting." : "Enter to send · Shift+Enter for a new line"} />
     </div>
   );
 }
@@ -150,49 +162,79 @@ function ChatSettings({ chat, onSave }: { chat: ChatDetail; onSave: (p: ChatPatc
   );
 }
 
-function MessageList({ query, hasModels }: { query: { isPending: boolean; isError: boolean; data: ChatMessage[] | undefined; refetch: () => unknown }; hasModels: boolean }) {
+function MessageList({ query, hasModels, stream, onRegenerate }: {
+  query: { isPending: boolean; isError: boolean; data: ChatMessage[] | undefined; refetch: () => unknown };
+  hasModels: boolean; stream: StreamState; onRegenerate: (() => void) | undefined;
+}) {
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [query.data?.length]);
+  useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [query.data?.length, stream.text, stream.status]);
 
   if (query.isPending) return <div className="space-y-3 p-6"><Skeleton className="h-16 w-2/3" /><Skeleton className="ml-auto h-12 w-1/2" /></div>;
   if (query.isError) return <ErrorState message="Couldn't load messages." onRetry={() => void query.refetch()} />;
-  const items = (query.data ?? []).filter((m) => m.role !== "system");
-  if (items.length === 0) {
+  const streaming = stream.status !== "idle";
+  // Hide the in-flight assistant row from stored data; the live stream renders it.
+  const items = (query.data ?? []).filter((m) => m.role !== "system" && !(streaming && m.status === "streaming"));
+  if (items.length === 0 && !streaming) {
     return (
       <EmptyState icon={Bot} title="No messages yet"
-        description={hasModels ? "Pick a model from the top bar to get started." : "Add a provider in Settings → Connections, then click “Fetch models” to choose a model."}
+        description={hasModels ? "Pick a model from the top bar and send a message." : "Add a provider in Settings → Connections, then click “Fetch models” to choose a model."}
         action={!hasModels ? <Button asChild size="sm" variant="outline"><Link to="/settings/connections">Go to Connections</Link></Button> : undefined}
         className="h-full" />
     );
   }
+  const last = items[items.length - 1];
+  const canRegenerate = !streaming && onRegenerate && last && (last.role === "user" || last.status === "error" || last.status === "stopped");
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
-      {items.map((m) => (
-        <div key={m.id} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-          <div className={cn("min-w-0 max-w-[85%] text-sm", m.role === "user" ? "rounded-2xl bg-primary px-4 py-2.5 text-primary-foreground" : "w-full")}>
-            {m.role === "user" ? <p className="whitespace-pre-wrap break-words">{m.content}</p> : <Markdown content={m.content} />}
-            {m.status === "error" && (
-              <p className="mt-2 flex items-center gap-1.5 text-xs text-destructive"><AlertCircle className="size-3.5" />{m.error_message ?? "This response failed."}</p>
-            )}
-            {m.status === "stopped" && <p className="mt-2 text-xs text-muted-foreground">Response stopped.</p>}
-          </div>
-        </div>
-      ))}
+      {items.map((m) => <Bubble key={m.id} role={m.role} content={m.content} status={m.status} error={m.error_message} />)}
+      {streaming && stream.pendingUserText && <Bubble role="user" content={stream.pendingUserText} status="complete" error={null} />}
+      {streaming && (
+        stream.text
+          ? <Bubble role="assistant" content={stream.text} status="streaming" error={null} />
+          : <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Thinking…</div>
+      )}
+      {canRegenerate && (
+        <div><Button size="sm" variant="outline" onClick={onRegenerate}><RotateCcw className="size-4" />{last.role === "user" ? "Retry" : "Regenerate"}</Button></div>
+      )}
       <div ref={end} />
     </div>
   );
 }
 
-function Composer({ disabled, hint }: { disabled: boolean; hint: string }) {
+function Bubble({ role, content, status, error }: { role: ChatMessage["role"]; content: string; status: ChatMessage["status"]; error: string | null }) {
+  return (
+    <div className={cn("flex", role === "user" ? "justify-end" : "justify-start")}>
+      <div className={cn("min-w-0 max-w-[85%] text-sm", role === "user" ? "rounded-2xl bg-primary px-4 py-2.5 text-primary-foreground" : "w-full")}>
+        {role === "user" ? <p className="whitespace-pre-wrap break-words">{content}</p> : content ? <Markdown content={content} /> : null}
+        {status === "error" && <p className="mt-2 flex items-center gap-1.5 text-xs text-destructive"><AlertCircle className="size-3.5" />{error ?? "This response failed."}</p>}
+        {status === "stopped" && <p className="mt-2 text-xs italic text-muted-foreground">Response stopped.</p>}
+      </div>
+    </div>
+  );
+}
+
+function Composer({ disabled, busy, hint, onSend, onStop }: { disabled: boolean; busy: boolean; hint: string; onSend: (text: string) => void; onStop: () => void }) {
   const [text, setText] = useState("");
+  const submit = () => {
+    const t = text.trim();
+    if (!t || disabled || busy) return;
+    if (t.length > 32_000) { notify.error("Your message is too long (max 32,000 characters)."); return; }
+    onSend(t);
+    setText("");
+  };
   return (
     <div className="border-t bg-background p-3">
-      <form className="mx-auto max-w-3xl" onSubmit={(e) => { e.preventDefault(); notify.info("Sending messages arrives in the next phase."); }}>
+      <form className="mx-auto max-w-3xl" onSubmit={(e) => { e.preventDefault(); submit(); }}>
         <div className="flex items-end gap-2 rounded-xl border bg-card p-2 focus-within:ring-2 focus-within:ring-ring">
           <Textarea value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} rows={1}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
             placeholder={disabled ? "Select a model to start" : "Message…"} aria-label="Message"
             className="max-h-48 min-h-10 flex-1 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0" />
-          <Button type="submit" size="icon" disabled={disabled || !text.trim()} aria-label="Send"><SendHorizontal className="size-4" /></Button>
+          {busy ? (
+            <Button type="button" size="icon" variant="secondary" onClick={onStop} aria-label="Stop response"><Square className="size-4" /></Button>
+          ) : (
+            <Button type="submit" size="icon" disabled={disabled || !text.trim()} aria-label="Send"><SendHorizontal className="size-4" /></Button>
+          )}
         </div>
         <p className="mt-1.5 text-center text-xs text-muted-foreground">{hint}</p>
       </form>

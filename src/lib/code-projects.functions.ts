@@ -24,10 +24,9 @@ async function admin() {
   return supabaseAdmin;
 }
 
+// All errors thrown in this module and code-projects.server are user-safe messages we wrote ourselves.
 function friendly(e: unknown): Error {
-  if (e instanceof Error && e.constructor.name === "CodeError") return e;
-  if (e instanceof Error && /no longer exists|isn't approved|not allowed|too/.test(e.message)) return e;
-  console.error("code project action failed");
+  if (e instanceof Error && e.message) return e;
   return new Error("Something went wrong saving your project. Please try again.");
 }
 
@@ -194,7 +193,7 @@ export const applyCodeChanges = createServerFn({ method: "POST" })
         }
         it.status = "applied"; it.error = null;
       } catch (e) {
-        it.error = e instanceof Error && e.constructor.name !== "Error" ? e.message : e instanceof Error ? e.message.slice(0, 200) : "Couldn't apply this change.";
+        it.error = e instanceof Error && e.message ? e.message.slice(0, 200) : "Couldn't apply this change.";
         errors.push(`${it.path}: ${it.error}`);
       }
     }

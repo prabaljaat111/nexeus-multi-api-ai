@@ -198,6 +198,115 @@ export type Database = {
         }
         Relationships: []
       }
+      image_generation_jobs: {
+        Row: {
+          aspect_ratio: string | null
+          attachment_id: string | null
+          chat_id: string | null
+          connection_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          model_id: string | null
+          negative_prompt: string | null
+          prompt: string
+          provider_job_id: string | null
+          quality: string | null
+          revised_prompt: string | null
+          size: string | null
+          status: string
+          style: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          attachment_id?: string | null
+          chat_id?: string | null
+          connection_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          model_id?: string | null
+          negative_prompt?: string | null
+          prompt: string
+          provider_job_id?: string | null
+          quality?: string | null
+          revised_prompt?: string | null
+          size?: string | null
+          status?: string
+          style?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aspect_ratio?: string | null
+          attachment_id?: string | null
+          chat_id?: string | null
+          connection_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          model_id?: string | null
+          negative_prompt?: string | null
+          prompt?: string
+          provider_job_id?: string | null
+          quality?: string | null
+          revised_prompt?: string | null
+          size?: string | null
+          status?: string
+          style?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "image_generation_jobs_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "chat_attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "image_generation_jobs_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "image_generation_jobs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "image_generation_jobs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "image_generation_jobs_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "image_generation_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           chat_id: string

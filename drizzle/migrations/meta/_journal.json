@@ -64,6 +64,13 @@
       "when": 1790968742141,
       "tag": "0008_chat_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790968961793,
+      "tag": "0009_image_generation",
+      "breakpoints": true
     }
   ]
 }

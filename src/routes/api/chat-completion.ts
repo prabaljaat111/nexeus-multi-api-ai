@@ -24,6 +24,8 @@ const inputSchema = z.object({
   maxTokens: z.number().int().min(1).max(1_000_000).nullable().optional(),
   topP: z.number().gt(0).max(1).nullable().optional(),
   attachmentIds: z.array(z.string().uuid()).max(20).optional(),
+  // Files explicitly chosen by the user for AI analysis / vision on this turn.
+  contextAttachmentIds: z.array(z.string().uuid()).max(10).optional(),
 }).refine((d) => d.regenerate || (d.message && d.message.trim().length > 0), { message: "Message is required" });
 
 function json(status: number, code: string, message: string) {
@@ -87,7 +89,7 @@ export const Route = createFileRoute("/api/chat-completion")({
         if (!chat || chat.user_id !== userId) return json(404, "chat_not_found", "This chat no longer exists.");
 
         // Model must be enabled and visible to the user (RLS hides disabled connections).
-        const { data: model } = await sb.from("models").select("id, provider_model_id, enabled, connection_id").eq("id", input.modelId).maybeSingle();
+        const { data: model } = await sb.from("models").select("id, provider_model_id, enabled, connection_id, capabilities").eq("id", input.modelId).maybeSingle();
         if (!model || !model.enabled) return json(404, "model_unavailable", "This model is no longer available. Choose another model.");
         const { data: canView } = await sb.rpc("can_view_connection", { _connection_id: model.connection_id });
         if (canView !== true) return json(404, "model_unavailable", "This model is no longer available. Choose another model.");
@@ -157,9 +159,35 @@ export const Route = createFileRoute("/api/chat-completion")({
         while (history.length && history[0]!.role !== "user") history.shift();
         if (!history.length || history[history.length - 1]!.role !== "user") return json(400, "nothing_to_answer", "There's no message to respond to.");
 
+        // --- Selected file context (analysis + vision), validated before anything is streamed ---
+        const contextIds = [...new Set(input.contextAttachmentIds ?? [])];
+        let analysis: Awaited<ReturnType<typeof import("@/lib/analysis-context.server").buildAnalysisContext>> | null = null;
+        let toolRunId: string | null = null;
+        if (contextIds.length) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { buildAnalysisContext, AnalysisError } = await import("@/lib/analysis-context.server");
+          const caps = model.capabilities as Record<string, unknown> | null;
+          try {
+            analysis = await buildAnalysisContext(supabaseAdmin, userId, chat.id, contextIds, caps?.["vision"] === true);
+          } catch (e) {
+            if (e instanceof AnalysisError) return json(400, e.code, e.message);
+            console.error("analysis context failure");
+            return json(500, "analysis_failed", "Couldn't prepare the selected files. Please try again.");
+          }
+          const lastUser = history[history.length - 1]!;
+          if (analysis.vision.length) lastUser.images = analysis.vision;
+          const { data: run } = await supabaseAdmin.from("tool_runs").insert({
+            user_id: userId, chat_id: chat.id, tool_name: "analyze_attachments", status: "running",
+            input_summary: { files: analysis.docCount, images: analysis.imageCount, truncated: analysis.truncatedFiles.length },
+          }).select("id").single();
+          toolRunId = run?.id ?? null;
+        }
+        const citations = analysis?.citations.length
+          ? { sources: analysis.citations, truncated: analysis.truncatedFiles } : null;
+
         // --- Assistant placeholder ---
         const { data: assistant, error: aErr } = await sb.from("messages")
-          .insert({ chat_id: chat.id, role: "assistant", content: "", status: "streaming", model_id: model.id }).select("id").single();
+          .insert({ chat_id: chat.id, role: "assistant", content: "", status: "streaming", model_id: model.id, citations }).select("id").single();
         if (aErr || !assistant) return json(500, "save_failed", "Couldn't start the response. Please try again.");
         const messageId = assistant.id;
 
@@ -172,7 +200,7 @@ export const Route = createFileRoute("/api/chat-completion")({
         type Provider = Parameters<typeof streamChat>[0]["provider"];
 
         const settings = {
-          system: input.systemPrompt !== undefined ? input.systemPrompt : chat.system_prompt,
+          system: [input.systemPrompt !== undefined ? input.systemPrompt : chat.system_prompt, analysis?.system].filter((x) => x && x.trim()).join("\n\n") || null,
           temperature: input.temperature !== undefined ? input.temperature : chat.temperature,
           maxTokens: input.maxTokens !== undefined ? input.maxTokens : chat.max_tokens,
           topP: input.topP !== undefined ? input.topP : chat.top_p,
@@ -189,6 +217,13 @@ export const Route = createFileRoute("/api/chat-completion")({
             };
             const finish = async (patch: Database["public"]["Tables"]["messages"]["Update"]) => {
               await sb.from("messages").update({ content, ...patch }).eq("id", messageId);
+              if (toolRunId) {
+                const ok = patch.status === "complete";
+                await supabaseAdmin.from("tool_runs").update({
+                  status: ok ? "complete" : patch.status === "stopped" ? "cancelled" : "failed", message_id: messageId,
+                  error_message: ok ? null : patch.error_message ?? null, updated_at: new Date().toISOString(),
+                }).eq("id", toolRunId);
+              }
             };
             try {
               if (!conn || !conn.enabled) throw new ChatStreamError("model_unavailable");

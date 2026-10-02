@@ -17,7 +17,7 @@ export class ChatStreamError extends Error {
   constructor(public code: ChatErrorCode) { super(code); }
 }
 
-export interface HistoryMessage { role: "user" | "assistant"; content: string }
+export interface HistoryMessage { role: "user" | "assistant"; content: string; images?: { mime: string; b64: string }[] | undefined }
 
 export interface StreamParams {
   provider: ProviderType;
@@ -131,7 +131,12 @@ export async function streamChat(p: StreamParams, onDelta: (text: string) => voi
   if (p.provider === "anthropic") {
     const body: Obj = {
       model: p.model, stream: true, max_tokens: p.maxTokens ?? 4096,
-      messages: p.messages,
+      messages: p.messages.map((m) => ({
+        role: m.role,
+        content: m.images?.length
+          ? [...m.images.map((i) => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.b64 } })), { type: "text", text: m.content }]
+          : m.content,
+      })),
       ...(p.system ? { system: p.system } : {}),
       ...(p.temperature != null ? { temperature: Math.min(p.temperature, 1) } : {}),
     };
@@ -157,7 +162,7 @@ export async function streamChat(p: StreamParams, onDelta: (text: string) => voi
     if (p.topP != null) gen["topP"] = p.topP;
     if (p.maxTokens != null) gen["maxOutputTokens"] = p.maxTokens;
     const body: Obj = {
-      contents: p.messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+      contents: p.messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [...(m.images ?? []).map((i) => ({ inline_data: { mime_type: i.mime, data: i.b64 } })), { text: m.content }] })),
       generationConfig: gen,
       ...(p.system ? { systemInstruction: { parts: [{ text: p.system }] } } : {}),
     };
@@ -187,7 +192,12 @@ export async function streamChat(p: StreamParams, onDelta: (text: string) => voi
   const reasoningModel = p.provider === "openai" && /^(o\d|gpt-5)/i.test(p.model);
   const body: Obj = {
     model: p.model, stream: true, stream_options: { include_usage: true },
-    messages: [...(p.system ? [{ role: "system", content: p.system }] : []), ...p.messages],
+    messages: [...(p.system ? [{ role: "system", content: p.system }] : []), ...p.messages.map((m) => ({
+      role: m.role,
+      content: m.images?.length
+        ? [{ type: "text", text: m.content }, ...m.images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mime};base64,${i.b64}` } }))]
+        : m.content,
+    }))],
   };
   if (!reasoningModel) {
     if (p.temperature != null) body["temperature"] = p.temperature;

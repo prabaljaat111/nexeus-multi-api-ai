@@ -13,6 +13,11 @@ import {
   FilePlus2,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { AgentToggle, ApprovalDialog, RunnerBanner, ToolSteps, WebSources, agentKeys, useAgentSteps } from "@/components/agent-ui";
+import { getAgentState, probeModelTools } from "@/lib/agent.functions";
+import { NOT_TOOL_CAPABLE, type AgentStepEvent } from "@/lib/agent-tools";
+import { useServerFn } from "@tanstack/react-start";
+import { supabase } from "@/integrations/supabase/client";
 import { NewProjectDialog } from "@/components/code/new-project-dialog";
 import { Code2 } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/states";
@@ -92,9 +97,18 @@ function ChatThread() {
     void qc.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
     void qc.invalidateQueries({ queryKey: chatKeys.list });
     void qc.invalidateQueries({ queryKey: attachmentKeys.chat(chatId) });
+    void qc.invalidateQueries({ queryKey: agentKeys.steps(chatId) });
   }, [qc, chatId]);
   const onStreamError = useCallback((m: string) => notify.error(m), []);
   const stream = useChatStream(refresh, onStreamError);
+  const agentSteps = useAgentSteps(chatId);
+  const fetchAgentState = useServerFn(getAgentState);
+  const agentState = useQuery({ queryKey: agentKeys.state, queryFn: () => fetchAgentState(), refetchInterval: 30_000 });
+  const probe = useServerFn(probeModelTools);
+  const [agentOn, setAgentOn] = useState<boolean | null>(null);
+  const agentMode = agentOn ?? agentState.data?.agentDefault ?? false;
+  const runnerOnline = !!agentState.data?.runners.some((r) => r.online);
+  const pendingApproval = stream.state.steps.find((s) => s.status === "awaiting_approval" && s.approvalId) ?? null;
   const images = useImageGeneration(chatId, refresh);
   const selectedId = chat.data?.selected_model_id && models.data?.some((m) => m.id === chat.data?.selected_model_id) ? chat.data.selected_model_id : null;
   const artifacts = useArtifactGeneration(chatId, selectedId, refresh);
@@ -122,6 +136,19 @@ function ChatThread() {
   const c = chat.data;
   const selectedModel = models.data?.find((m) => m.id === c.selected_model_id) ?? null;
   const modelUnavailable = !!c.selected_model_id && !!models.data && !selectedModel;
+
+  async function toggleAgent(next: boolean) {
+    if (!next) { setAgentOn(false); return; }
+    if (!selectedModel) { notify.error("Select a model first."); return; }
+    const { data: m } = await supabase.from("models").select("supports_tool_calls").eq("id", selectedModel.id).maybeSingle();
+    let ok = m?.supports_tool_calls ?? null;
+    if (ok === null) {
+      notify.success("Checking whether this model supports native tool calling…");
+      try { ok = (await probe({ data: { modelId: selectedModel.id } })).supported; } catch (e) { notify.fromError(e); return; }
+    }
+    if (!ok) { notify.error(NOT_TOOL_CAPABLE); setAgentOn(false); return; }
+    setAgentOn(true);
+  }
 
   /** Phase 1 regenerate: remove the latest assistant reply, then generate a replacement. */
   async function regenerate(lastAssistant: ChatMessage | null) {
@@ -167,7 +194,11 @@ function ChatThread() {
           <AlertTriangle className="size-4 shrink-0" />This model is no longer available. Choose another model from the selector above.
         </div>
       )}
-      <MessageList query={messages} hasModels={(models.data?.length ?? 0) > 0} stream={stream.state} canAct={!!selectedModel && !stream.busy}
+      {agentMode && agentState.data && !runnerOnline && (
+        <RunnerBanner message="Agent Mode is on, but your Agent Runner is not connected. Tools can't run until it is." />
+      )}
+      <ApprovalDialog step={pendingApproval} />
+      <MessageList agentSteps={agentSteps.data} query={messages} hasModels={(models.data?.length ?? 0) > 0} stream={stream.state} canAct={!!selectedModel && !stream.busy}
         editingId={editing?.id ?? null}
         onRegenerate={(a) => void regenerate(a)} onEdit={setEditing} onCancelEdit={() => setEditing(null)}
         onSubmitEdit={(m, t) => void resendEdited(m, t)} onDelete={(m) => removeMsg.mutateAsync(m.id).then(() => undefined, () => undefined)}
@@ -192,7 +223,15 @@ function ChatThread() {
         fileBusy={!!artifacts.pending} onFile={(format, instruction) => setArtifactDialog({ initial: format ? { format, ...(instruction ? { instruction } : {}) } : null })}
         attachRequest={attachRequest} chatAttachments={attachments.data} vision={!!selectedModel?.vision}
         imageBusy={!!images.pending} onImage={(prompt) => openImageDialog(prompt ? { prompt } : null)}
-        onSend={(text, attachmentIds, contextAttachmentIds) => { if (selectedModel) void stream.send({ chatId, modelId: selectedModel.id, message: text, attachmentIds, contextAttachmentIds }); }}
+        agentMode={agentMode} onAgentChange={(v) => void toggleAgent(v)}
+        onSend={(text, attachmentIds, contextAttachmentIds) => {
+          if (!selectedModel) return;
+          if (agentMode) {
+            if (attachmentIds.length || contextAttachmentIds.length) notify.error("Attachments aren't sent in Agent Mode. Turn Agent off to include files.");
+            const cont = /^continue\.?$/i.test(text.trim());
+            void stream.send({ chatId, modelId: selectedModel.id, message: text, agent: true, continueRun: cont });
+          } else void stream.send({ chatId, modelId: selectedModel.id, message: text, attachmentIds, contextAttachmentIds });
+        }}
         onAttachmentsRefresh={() => void qc.invalidateQueries({ queryKey: attachmentKeys.chat(chatId) })} hint={hint} />
     </div>
   );
@@ -305,7 +344,8 @@ function ChatSettings({ chat, onSave }: { chat: ChatDetail; onSave: (p: ChatPatc
   );
 }
 
-function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachmentsByMessage, onAttachmentsChanged, jobsByMessage, canGenerateImage, onImageVariation, imageProgress, artifactsByMessage, canGenerateFile, onFileRegenerate, onAttachFile }: {
+function MessageList({ agentSteps, query, hasModels, stream, canAct, editingId, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachmentsByMessage, onAttachmentsChanged, jobsByMessage, canGenerateImage, onImageVariation, imageProgress, artifactsByMessage, canGenerateFile, onFileRegenerate, onAttachFile }: {
+  agentSteps: Map<string, AgentStepEvent[]> | undefined;
   query: { isPending: boolean; isError: boolean; data: ChatMessage[] | undefined; refetch: () => unknown };
   hasModels: boolean; stream: StreamState; canAct: boolean; editingId: string | null;
   onRegenerate: (lastAssistant: ChatMessage | null) => void; onEdit: (m: ChatMessage) => void; onCancelEdit: () => void;
@@ -355,10 +395,12 @@ function MessageList({ query, hasModels, stream, canAct, editingId, onRegenerate
             onSubmitEdit={(t) => onSubmitEdit(m, t)} onDelete={() => onDelete(m)}
             attachments={attachmentsByMessage.get(m.id)} onAttachmentsChanged={onAttachmentsChanged}
             imageJob={jobsByMessage.get(m.id)} canGenerateImage={canGenerateImage} onImageVariation={onImageVariation}
+            steps={agentSteps?.get(m.id)}
             artifactJob={artifactsByMessage.get(m.id)} canGenerateFile={canGenerateFile} onFileRegenerate={onFileRegenerate} onAttachFile={onAttachFile} />
         ))}
         {imageProgress}
         {streaming && stream.pendingUserText && <StaticBubble role="user" content={stream.pendingUserText} />}
+        {streaming && stream.steps.length > 0 && <ToolSteps steps={stream.steps} />}
         {streaming && (stream.text
           ? <StaticBubble role="assistant" content={stream.text} />
           : <div className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite"><Loader2 className="size-4 animate-spin" />Thinking…</div>)}
@@ -402,7 +444,8 @@ function ActionButton({ label, onClick, children }: { label: string; onClick: ()
   return <Button type="button" size="icon" variant="ghost" className="size-7 text-muted-foreground" aria-label={label} title={label} onClick={onClick}>{children}</Button>;
 }
 
-const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachments, onAttachmentsChanged, imageJob, canGenerateImage, onImageVariation, artifactJob, canGenerateFile, onFileRegenerate, onAttachFile }: {
+const Bubble = memo(function Bubble({ steps, message: m, canAct, isEditing, canRegenerate, canEdit, onRegenerate, onEdit, onCancelEdit, onSubmitEdit, onDelete, attachments, onAttachmentsChanged, imageJob, canGenerateImage, onImageVariation, artifactJob, canGenerateFile, onFileRegenerate, onAttachFile }: {
+  steps?: AgentStepEvent[] | undefined;
   message: ChatMessage; canAct: boolean; isEditing: boolean; canRegenerate: boolean; canEdit: boolean;
   onRegenerate: () => void; onEdit: () => void; onCancelEdit: () => void; onSubmitEdit: (t: string) => void; onDelete: () => Promise<void>;
   attachments?: AttachmentRow[] | undefined; onAttachmentsChanged: () => void;
@@ -437,6 +480,7 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
   return (
     <div className={cn("group flex flex-col", isUser ? "items-end" : "items-start")}>
       <div className={cn("min-w-0 max-w-[85%] text-sm", isUser ? "rounded-2xl bg-primary px-4 py-2.5 text-primary-foreground" : "w-full")}>
+        {!isUser && steps && <ToolSteps steps={steps} />}
         {isUser ? <p className="whitespace-pre-wrap break-words">{m.content}</p> : m.content ? <Markdown content={m.content} /> : null}
         {m.status === "error" && <p className="mt-2 flex items-center gap-1.5 text-xs text-destructive"><AlertCircle className="size-3.5" />{m.error_message ?? "This response failed."}</p>}
         {m.status === "stopped" && <p className="mt-2 text-xs italic text-muted-foreground">Response stopped.</p>}
@@ -446,7 +490,7 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
           <GeneratedImageCard a={a} job={imageJob} canRegenerate={canGenerateImage} onRegenerate={onImageVariation} onDeleted={onAttachmentsChanged} />
         </div>
       ))}
-      {!isUser && m.citations && <div className="w-full max-w-[85%]"><Citations c={m.citations} /></div>}
+      {!isUser && m.citations && <div className="w-full max-w-[85%]"><Citations c={m.citations} /><WebSources citations={m.citations} /></div>}
       {docs.map((a) => (
         <div key={a.id} className="mt-2 w-full max-w-md">
           <GeneratedFileCard a={a} job={artifactJob} canRegenerate={canGenerateFile} onRegenerate={onFileRegenerate} onDeleted={onAttachmentsChanged} onAttach={onAttachFile} />
@@ -469,7 +513,8 @@ const Bubble = memo(function Bubble({ message: m, canAct, isEditing, canRegenera
   );
 });
 
-function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, imageBusy, onFile, fileBusy, attachRequest, chatAttachments, vision, onAttachmentsRefresh }: {
+function Composer({ agentMode, onAgentChange, chatId, disabled, busy, hint, onSend, onStop, onImage, imageBusy, onFile, fileBusy, attachRequest, chatAttachments, vision, onAttachmentsRefresh }: {
+  agentMode: boolean; onAgentChange: (v: boolean) => void;
   chatId: string; disabled: boolean; busy: boolean; hint: string; onSend: (text: string, attachmentIds: string[], contextIds: string[]) => void; onStop: () => void;
   chatAttachments: AttachmentRow[] | undefined; vision: boolean; onAttachmentsRefresh: () => void;
   onImage: (prompt: string) => void; imageBusy: boolean;
@@ -539,9 +584,10 @@ function Composer({ chatId, disabled, busy, hint, onSend, onStop, onImage, image
             <input ref={fileRef} type="file" multiple hidden onChange={(e) => { if (e.target.files) uploads.add(e.target.files); e.target.value = ""; }} />
             <ToolsMenu disabled={disabled} running={{ image: imageBusy, file: fileBusy }} onUpload={() => fileRef.current?.click()}
               onAnalyze={() => setPickerOpen(true)} onImage={() => onImage("")} onFile={(f) => onFile(f, "")} />
+            <AgentToggle on={agentMode} onChange={onAgentChange} disabled={disabled || busy} />
             <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} rows={1}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
-              placeholder={disabled ? "Select a model to start" : "Message…"} aria-label="Message"
+              placeholder={disabled ? "Select a model to start" : agentMode ? "Ask the agent…" : "Message…"} aria-label="Message"
               className="min-h-10 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent shadow-none focus-visible:ring-0" />
             {busy ? (
               <Button type="button" size="icon" variant="secondary" onClick={onStop} aria-label="Stop response"><Square className="size-4" /></Button>

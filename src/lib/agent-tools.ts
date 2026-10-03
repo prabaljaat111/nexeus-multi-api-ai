@@ -1,6 +1,6 @@
 // Client-safe Agent Mode catalog: tool names, permission groups, risk and readable summaries.
 // Argument validation (Zod) is shared by the server orchestrator; the runner re-validates everything.
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export type PermissionMode = "disabled" | "ask_every_time" | "auto_allow";
 export type Risk = "low" | "medium" | "high";

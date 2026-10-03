@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { toJSONSchema } from "zod/v4";
 import type { Database, Json } from "@/integrations/supabase/types";
 import {
   AGENT_LIMITS, NOT_TOOL_CAPABLE, TOOL_META, TOOL_NAMES, TOOL_SCHEMAS, decide, summarize,
@@ -126,7 +127,7 @@ export const Route = createFileRoute("/api/agent-completion")({
         type Provider = Parameters<typeof streamToolTurn>[0]["provider"];
 
         const tools = TOOL_NAMES.filter((n) => modeFor(TOOL_META[n].group) !== "disabled").map((n) => {
-          const schema = z.toJSONSchema(TOOL_SCHEMAS[n]) as Record<string, unknown>;
+          const schema = toJSONSchema(TOOL_SCHEMAS[n], { io: "input" }) as Record<string, unknown>;
           delete schema["$schema"];
           return { type: "function" as const, function: { name: n, description: TOOL_META[n].description, parameters: schema } };
         });

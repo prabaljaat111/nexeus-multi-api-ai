@@ -29,6 +29,7 @@ import { Route as AuthenticatedChatChatIdRouteImport } from './routes/_authentic
 import { Route as AuthenticatedSettingsConnectionsRouteImport } from './routes/_authenticated/settings/connections'
 import { Route as AuthenticatedSettingsModelsRouteImport } from './routes/_authenticated/settings/models'
 import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings/profile'
+import { Route as ApiPublicRunnerActionRouteImport } from './routes/api/public/runner/$action'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -134,6 +135,11 @@ const AuthenticatedSettingsProfileRoute =
     path: '/settings/profile',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicRunnerActionRoute = ApiPublicRunnerActionRouteImport.update({
+  id: '/api/public/runner/$action',
+  path: '/api/public/runner/$action',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/build/': typeof AuthenticatedBuildIndexRoute
   '/chat/': typeof AuthenticatedChatIndexRoute
+  '/api/public/runner/$action': typeof ApiPublicRunnerActionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/build': typeof AuthenticatedBuildIndexRoute
   '/chat': typeof AuthenticatedChatIndexRoute
+  '/api/public/runner/$action': typeof ApiPublicRunnerActionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/_authenticated/build/': typeof AuthenticatedBuildIndexRoute
   '/_authenticated/chat/': typeof AuthenticatedChatIndexRoute
+  '/api/public/runner/$action': typeof ApiPublicRunnerActionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/build/'
     | '/chat/'
+    | '/api/public/runner/$action'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/build'
     | '/chat'
+    | '/api/public/runner/$action'
   id:
     | '__root__'
     | '/'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/profile'
     | '/_authenticated/build/'
     | '/_authenticated/chat/'
+    | '/api/public/runner/$action'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -278,6 +290,7 @@ export interface RootRouteChildren {
   ApiChatCompletionRoute: typeof ApiChatCompletionRoute
   ApiCodeGenerationRoute: typeof ApiCodeGenerationRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  ApiPublicRunnerActionRoute: typeof ApiPublicRunnerActionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -422,6 +435,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/runner/$action': {
+      id: '/api/public/runner/$action'
+      path: '/api/public/runner/$action'
+      fullPath: '/api/public/runner/$action'
+      preLoaderRoute: typeof ApiPublicRunnerActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -477,6 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatCompletionRoute: ApiChatCompletionRoute,
   ApiCodeGenerationRoute: ApiCodeGenerationRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  ApiPublicRunnerActionRoute: ApiPublicRunnerActionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

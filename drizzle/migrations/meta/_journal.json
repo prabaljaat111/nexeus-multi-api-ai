@@ -99,6 +99,13 @@
       "when": 1790972725077,
       "tag": "0013_code_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791011904959,
+      "tag": "0014_agent_mode",
+      "breakpoints": true
     }
   ]
 }

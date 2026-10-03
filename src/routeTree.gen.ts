@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as ApiAgentCompletionRouteImport } from './routes/api/agent-completion'
 import { Route as ApiChatCompletionRouteImport } from './routes/api/chat-completion'
 import { Route as ApiCodeGenerationRouteImport } from './routes/api/code-generation'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -69,6 +70,11 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiAgentCompletionRoute = ApiAgentCompletionRouteImport.update({
+  id: '/api/agent-completion',
+  path: '/api/agent-completion',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatCompletionRoute = ApiChatCompletionRouteImport.update({
   id: '/api/chat-completion',
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/agent-completion': typeof ApiAgentCompletionRoute
   '/api/chat-completion': typeof ApiChatCompletionRoute
   '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/agent-completion': typeof ApiAgentCompletionRoute
   '/api/chat-completion': typeof ApiChatCompletionRoute
   '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/agent-completion': typeof ApiAgentCompletionRoute
   '/api/chat-completion': typeof ApiChatCompletionRoute
   '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/api/agent-completion'
     | '/api/chat-completion'
     | '/api/code-generation'
     | '/auth/callback'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/api/agent-completion'
     | '/api/chat-completion'
     | '/api/code-generation'
     | '/auth/callback'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authenticated/admin'
+    | '/api/agent-completion'
     | '/api/chat-completion'
     | '/api/code-generation'
     | '/auth/callback'
@@ -287,6 +299,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  ApiAgentCompletionRoute: typeof ApiAgentCompletionRoute
   ApiChatCompletionRoute: typeof ApiChatCompletionRoute
   ApiCodeGenerationRoute: typeof ApiCodeGenerationRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -350,6 +363,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/agent-completion': {
+      id: '/api/agent-completion'
+      path: '/api/agent-completion'
+      fullPath: '/api/agent-completion'
+      preLoaderRoute: typeof ApiAgentCompletionRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/chat-completion': {
       id: '/api/chat-completion'
@@ -494,6 +514,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  ApiAgentCompletionRoute: ApiAgentCompletionRoute,
   ApiChatCompletionRoute: ApiChatCompletionRoute,
   ApiCodeGenerationRoute: ApiCodeGenerationRoute,
   AuthCallbackRoute: AuthCallbackRoute,

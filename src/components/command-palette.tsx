@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Cpu, KeyRound, MessageSquarePlus, Search, SunMoon } from "lucide-react";
+import { Bot, Cpu, KeyRound, MessageSquarePlus, Search, SunMoon } from "lucide-react";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useTheme } from "@/lib/theme";

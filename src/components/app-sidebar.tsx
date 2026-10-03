@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
-import { ChevronsUpDown, Code2, Cpu, KeyRound, LogOut, Plus, Settings, Shield, UserRound } from "lucide-react";
+import { Bot, ChevronsUpDown, Code2, Cpu, KeyRound, LogOut, Plus, Settings, Shield, UserRound } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";

@@ -50,7 +50,7 @@ function mapStatus(status: number): ChatErrorCode {
   return "stream_failed";
 }
 
-async function open(url: string, headers: Record<string, string>, body: unknown, signal: AbortSignal, timeout: AbortController): Promise<Response> {
+export async function open(url: string, headers: Record<string, string>, body: unknown, signal: AbortSignal, timeout: AbortController): Promise<Response> {
   const combined = AbortSignal.any([signal, timeout.signal]);
   const timer = setTimeout(() => timeout.abort(), CONNECT_TIMEOUT_MS);
   try {
@@ -80,7 +80,7 @@ async function open(url: string, headers: Record<string, string>, body: unknown,
 }
 
 /** Iterates SSE `data:` payloads, enforcing an idle timeout between chunks. */
-async function* sseData(res: Response, signal: AbortSignal, timeout: AbortController): AsyncGenerator<string> {
+export async function* sseData(res: Response, signal: AbortSignal, timeout: AbortController): AsyncGenerator<string> {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buf = "";
@@ -113,7 +113,7 @@ async function* sseData(res: Response, signal: AbortSignal, timeout: AbortContro
   }
 }
 
-function parse(data: string): Obj | null {
+export function parse(data: string): Obj | null {
   try { const v: unknown = JSON.parse(data); return isObj(v) ? v : null; } catch { return null; }
 }
 

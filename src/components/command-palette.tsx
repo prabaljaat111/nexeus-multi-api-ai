@@ -52,6 +52,7 @@ export function CommandPalette({ userId }: { userId: string }) {
         <CommandGroup heading="Go to">
           <CommandItem onSelect={() => run(() => void navigate({ to: "/settings/connections" }))}><KeyRound />Connections</CommandItem>
           <CommandItem onSelect={() => run(() => void navigate({ to: "/settings/models" }))}><Cpu />Models</CommandItem>
+          <CommandItem onSelect={() => run(() => void navigate({ to: "/settings/agent" }))}><Bot />Agent Tools &amp; Workspace</CommandItem>
         </CommandGroup>
       </CommandList>
     </CommandDialog>

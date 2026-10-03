@@ -27,6 +27,7 @@ import { Route as AuthenticatedBuildIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedBuildProjectIdRouteImport } from './routes/_authenticated/build/$projectId'
 import { Route as AuthenticatedChatIndexRouteImport } from './routes/_authenticated/chat/index'
 import { Route as AuthenticatedChatChatIdRouteImport } from './routes/_authenticated/chat/$chatId'
+import { Route as AuthenticatedSettingsAgentRouteImport } from './routes/_authenticated/settings/agent'
 import { Route as AuthenticatedSettingsConnectionsRouteImport } from './routes/_authenticated/settings/connections'
 import { Route as AuthenticatedSettingsModelsRouteImport } from './routes/_authenticated/settings/models'
 import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings/profile'
@@ -123,6 +124,12 @@ const AuthenticatedChatChatIdRoute = AuthenticatedChatChatIdRouteImport.update({
   path: '/chat/$chatId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsAgentRoute =
+  AuthenticatedSettingsAgentRouteImport.update({
+    id: '/settings/agent',
+    path: '/settings/agent',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsConnectionsRoute =
   AuthenticatedSettingsConnectionsRouteImport.update({
     id: '/settings/connections',
@@ -163,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
+  '/settings/agent': typeof AuthenticatedSettingsAgentRoute
   '/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
@@ -186,6 +194,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
+  '/settings/agent': typeof AuthenticatedSettingsAgentRoute
   '/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
@@ -211,6 +220,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/_authenticated/chat/$chatId': typeof AuthenticatedChatChatIdRoute
+  '/_authenticated/settings/agent': typeof AuthenticatedSettingsAgentRoute
   '/_authenticated/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/_authenticated/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/build/$projectId'
     | '/chat/$chatId'
+    | '/settings/agent'
     | '/settings/connections'
     | '/settings/models'
     | '/settings/profile'
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/build/$projectId'
     | '/chat/$chatId'
+    | '/settings/agent'
     | '/settings/connections'
     | '/settings/models'
     | '/settings/profile'
@@ -283,6 +295,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/build/$projectId'
     | '/_authenticated/chat/$chatId'
+    | '/_authenticated/settings/agent'
     | '/_authenticated/settings/connections'
     | '/_authenticated/settings/models'
     | '/_authenticated/settings/profile'
@@ -434,6 +447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChatChatIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings/agent': {
+      id: '/_authenticated/settings/agent'
+      path: '/settings/agent'
+      fullPath: '/settings/agent'
+      preLoaderRoute: typeof AuthenticatedSettingsAgentRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings/connections': {
       id: '/_authenticated/settings/connections'
       path: '/settings/connections'
@@ -485,6 +505,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedBuildProjectIdRoute: typeof AuthenticatedBuildProjectIdRoute
   AuthenticatedChatChatIdRoute: typeof AuthenticatedChatChatIdRoute
+  AuthenticatedSettingsAgentRoute: typeof AuthenticatedSettingsAgentRoute
   AuthenticatedSettingsConnectionsRoute: typeof AuthenticatedSettingsConnectionsRoute
   AuthenticatedSettingsModelsRoute: typeof AuthenticatedSettingsModelsRoute
   AuthenticatedSettingsProfileRoute: typeof AuthenticatedSettingsProfileRoute
@@ -496,6 +517,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedBuildProjectIdRoute: AuthenticatedBuildProjectIdRoute,
   AuthenticatedChatChatIdRoute: AuthenticatedChatChatIdRoute,
+  AuthenticatedSettingsAgentRoute: AuthenticatedSettingsAgentRoute,
   AuthenticatedSettingsConnectionsRoute: AuthenticatedSettingsConnectionsRoute,
   AuthenticatedSettingsModelsRoute: AuthenticatedSettingsModelsRoute,
   AuthenticatedSettingsProfileRoute: AuthenticatedSettingsProfileRoute,

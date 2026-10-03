@@ -87,6 +87,7 @@ export function AppSidebar({ user, isAdmin }: { user: User; isAdmin: boolean }) 
                   <DropdownMenuItem asChild><Link to="/settings/profile" onClick={closeMobile}><UserRound className="size-4" />Profile</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link to="/settings/connections" onClick={closeMobile}><KeyRound className="size-4" />Connections</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link to="/settings/models" onClick={closeMobile}><Cpu className="size-4" />Models</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link to="/settings/agent" onClick={closeMobile}><Bot className="size-4" />Agent Tools &amp; Workspace</Link></DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => void signOut()}><LogOut className="size-4" />Sign out</DropdownMenuItem>
                 </DropdownMenuContent>

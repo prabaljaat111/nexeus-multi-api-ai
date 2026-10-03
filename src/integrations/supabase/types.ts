@@ -14,6 +14,398 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_approvals: {
+        Row: {
+          action_summary: string
+          agent_run_id: string
+          always_allow: boolean
+          created_at: string
+          expires_at: string | null
+          id: string
+          resolved_at: string | null
+          status: string
+          tool_step_id: string
+          user_id: string
+        }
+        Insert: {
+          action_summary: string
+          agent_run_id: string
+          always_allow?: boolean
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          resolved_at?: string | null
+          status: string
+          tool_step_id: string
+          user_id: string
+        }
+        Update: {
+          action_summary?: string
+          agent_run_id?: string
+          always_allow?: boolean
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          resolved_at?: string | null
+          status?: string
+          tool_step_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_approvals_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_approvals_tool_step_id_fkey"
+            columns: ["tool_step_id"]
+            isOneToOne: false
+            referencedRelation: "agent_tool_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_runner_credentials: {
+        Row: {
+          created_at: string
+          pairing_code_hash: string | null
+          pairing_expires_at: string | null
+          runner_id: string
+          token_hash: string | null
+        }
+        Insert: {
+          created_at?: string
+          pairing_code_hash?: string | null
+          pairing_expires_at?: string | null
+          runner_id: string
+          token_hash?: string | null
+        }
+        Update: {
+          created_at?: string
+          pairing_code_hash?: string | null
+          pairing_expires_at?: string | null
+          runner_id?: string
+          token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runner_credentials_runner_id_fkey"
+            columns: ["runner_id"]
+            isOneToOne: true
+            referencedRelation: "agent_runners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_runners: {
+        Row: {
+          created_at: string
+          id: string
+          last_seen_at: string | null
+          name: string
+          platform: string | null
+          runner_version: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          name: string
+          platform?: string | null
+          runner_version?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          name?: string
+          platform?: string | null
+          runner_version?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_runs: {
+        Row: {
+          chat_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          model_id: string | null
+          runner_id: string | null
+          status: string
+          step_count: number
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          chat_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          model_id?: string | null
+          runner_id?: string | null
+          status: string
+          step_count?: number
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          chat_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          model_id?: string | null
+          runner_id?: string | null
+          status?: string
+          step_count?: number
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_runner_id_fkey"
+            columns: ["runner_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "agent_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_tasks: {
+        Row: {
+          args: Json
+          claimed_at: string | null
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          result: Json | null
+          runner_id: string
+          status: string
+          tool_name: string
+          tool_step_id: string | null
+          user_id: string
+          workspace_root: string | null
+        }
+        Insert: {
+          args?: Json
+          claimed_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          result?: Json | null
+          runner_id: string
+          status?: string
+          tool_name: string
+          tool_step_id?: string | null
+          user_id: string
+          workspace_root?: string | null
+        }
+        Update: {
+          args?: Json
+          claimed_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          result?: Json | null
+          runner_id?: string
+          status?: string
+          tool_name?: string
+          tool_step_id?: string | null
+          user_id?: string
+          workspace_root?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tasks_runner_id_fkey"
+            columns: ["runner_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_tasks_tool_step_id_fkey"
+            columns: ["tool_step_id"]
+            isOneToOne: false
+            referencedRelation: "agent_tool_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_tool_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_mode: string
+          tool_name: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_mode: string
+          tool_name: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_mode?: string
+          tool_name?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tool_permissions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "agent_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_tool_steps: {
+        Row: {
+          agent_run_id: string
+          created_at: string
+          duration_ms: number | null
+          id: string
+          safe_input: Json
+          safe_output: Json
+          status: string
+          step_number: number
+          tool_name: string
+          updated_at: string
+        }
+        Insert: {
+          agent_run_id: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          safe_input?: Json
+          safe_output?: Json
+          status: string
+          step_number: number
+          tool_name: string
+          updated_at?: string
+        }
+        Update: {
+          agent_run_id?: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          safe_input?: Json
+          safe_output?: Json
+          status?: string
+          step_number?: number
+          tool_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tool_steps_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_workspaces: {
+        Row: {
+          configured_root: string
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          runner_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          configured_root: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          runner_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          configured_root?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          runner_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_workspaces_runner_id_fkey"
+            columns: ["runner_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       artifact_generation_jobs: {
         Row: {
           attachment_id: string | null
@@ -643,6 +1035,69 @@ export type Database = {
           },
         ]
       }
+      managed_dev_servers: {
+        Row: {
+          command_summary: string
+          created_at: string
+          id: string
+          local_port: number | null
+          process_identifier: string | null
+          runner_id: string
+          safe_preview_url: string | null
+          started_at: string | null
+          status: string
+          stopped_at: string | null
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          command_summary: string
+          created_at?: string
+          id?: string
+          local_port?: number | null
+          process_identifier?: string | null
+          runner_id: string
+          safe_preview_url?: string | null
+          started_at?: string | null
+          status: string
+          stopped_at?: string | null
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          command_summary?: string
+          created_at?: string
+          id?: string
+          local_port?: number | null
+          process_identifier?: string | null
+          runner_id?: string
+          safe_preview_url?: string | null
+          started_at?: string | null
+          status?: string
+          stopped_at?: string | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "managed_dev_servers_runner_id_fkey"
+            columns: ["runner_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "managed_dev_servers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "agent_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           chat_id: string
@@ -773,6 +1228,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          agent_auto_continue: boolean
+          agent_mode_default: boolean
           avatar_url: string | null
           created_at: string
           display_name: string | null
@@ -782,6 +1239,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agent_auto_continue?: boolean
+          agent_mode_default?: boolean
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -791,6 +1250,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agent_auto_continue?: boolean
+          agent_mode_default?: boolean
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null

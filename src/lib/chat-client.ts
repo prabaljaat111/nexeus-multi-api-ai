@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { AgentStepEvent } from "@/lib/agent-tools";
 
 export interface StreamState {
   messageId: string | null;
   pendingUserText: string | null;
   text: string;
   status: "idle" | "submitted" | "streaming";
+  /** Agent Mode tool activity for the in-flight response. */
+  steps: AgentStepEvent[];
 }
 
-export interface SendArgs { chatId: string; modelId: string; message?: string; regenerate?: boolean; attachmentIds?: string[]; contextAttachmentIds?: string[] }
+export interface SendArgs { chatId: string; modelId: string; message?: string; regenerate?: boolean; attachmentIds?: string[]; contextAttachmentIds?: string[]; agent?: boolean; continueRun?: boolean; workspaceId?: string | null }
 
 const STREAM_FAILED = "Unable to stream this response. Your message was saved; try regenerating.";
 
 /** Client for the chat-completion SSE endpoint. Calls onSettled after any terminal outcome. */
 export function useChatStream(onSettled: () => void, onError: (message: string) => void) {
-  const [state, setState] = useState<StreamState>({ messageId: null, pendingUserText: null, text: "", status: "idle" });
+  const [state, setState] = useState<StreamState>({ messageId: null, pendingUserText: null, text: "", status: "idle", steps: [] });
   const abortRef = useRef<AbortController | null>(null);
   const frameRef = useRef<number | null>(null);
   const busy = state.status !== "idle";
@@ -27,17 +30,20 @@ export function useChatStream(onSettled: () => void, onError: (message: string) 
     if (abortRef.current) return; // duplicate-submit guard
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    setState({ messageId: null, pendingUserText: args.regenerate ? null : args.message ?? null, text: "", status: "submitted" });
+    setState({ messageId: null, pendingUserText: args.regenerate ? null : args.message ?? null, text: "", status: "submitted", steps: [] });
     let messageId: string | null = null;
     let text = "";
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error("Please sign in again.");
-      const res = await fetch("/api/chat-completion", {
+      const { agent, continueRun, workspaceId, ...chatArgs } = args;
+      const res = await fetch(agent ? "/api/agent-completion" : "/api/chat-completion", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...args, requestId: crypto.randomUUID() }),
+        body: JSON.stringify(agent
+          ? { chatId: args.chatId, modelId: args.modelId, message: args.message, continueRun, workspaceId, requestId: crypto.randomUUID() }
+          : { ...chatArgs, requestId: crypto.randomUUID() }),
         signal: ctrl.signal,
       });
       if (!res.ok || !res.body) {
@@ -69,6 +75,13 @@ export function useChatStream(onSettled: () => void, onError: (message: string) 
                  setState((s) => ({ ...s, messageId, text, status: "streaming" }));
                });
              }
+          } else if (event === "step") {
+            const st = JSON.parse(raw) as AgentStepEvent;
+            setState((s) => {
+              const i = s.steps.findIndex((x) => x.id === st.id);
+              const steps = i >= 0 ? s.steps.map((x, j) => (j === i ? { ...x, ...st } : x)) : [...s.steps, st];
+              return { ...s, messageId, status: "streaming", steps };
+            });
           } else if (event === "error") {
             onError(payload.message ?? STREAM_FAILED);
           }
@@ -89,7 +102,7 @@ export function useChatStream(onSettled: () => void, onError: (message: string) 
         frameRef.current = null;
       }
       abortRef.current = null;
-      setState({ messageId: null, pendingUserText: null, text: "", status: "idle" });
+      setState({ messageId: null, pendingUserText: null, text: "", status: "idle", steps: [] });
       onSettled();
     }
   }, [onSettled, onError]);

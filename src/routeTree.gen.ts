@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as ApiAgentCompletionRouteImport } from './routes/api/agent-completion'
 import { Route as ApiChatCompletionRouteImport } from './routes/api/chat-completion'
 import { Route as ApiCodeGenerationRouteImport } from './routes/api/code-generation'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -26,9 +27,11 @@ import { Route as AuthenticatedBuildIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedBuildProjectIdRouteImport } from './routes/_authenticated/build/$projectId'
 import { Route as AuthenticatedChatIndexRouteImport } from './routes/_authenticated/chat/index'
 import { Route as AuthenticatedChatChatIdRouteImport } from './routes/_authenticated/chat/$chatId'
+import { Route as AuthenticatedSettingsAgentRouteImport } from './routes/_authenticated/settings/agent'
 import { Route as AuthenticatedSettingsConnectionsRouteImport } from './routes/_authenticated/settings/connections'
 import { Route as AuthenticatedSettingsModelsRouteImport } from './routes/_authenticated/settings/models'
 import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings/profile'
+import { Route as ApiPublicRunnerActionRouteImport } from './routes/api/public/runner/$action'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -68,6 +71,11 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiAgentCompletionRoute = ApiAgentCompletionRouteImport.update({
+  id: '/api/agent-completion',
+  path: '/api/agent-completion',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatCompletionRoute = ApiChatCompletionRouteImport.update({
   id: '/api/chat-completion',
@@ -116,6 +124,12 @@ const AuthenticatedChatChatIdRoute = AuthenticatedChatChatIdRouteImport.update({
   path: '/chat/$chatId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsAgentRoute =
+  AuthenticatedSettingsAgentRouteImport.update({
+    id: '/settings/agent',
+    path: '/settings/agent',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsConnectionsRoute =
   AuthenticatedSettingsConnectionsRouteImport.update({
     id: '/settings/connections',
@@ -134,6 +148,11 @@ const AuthenticatedSettingsProfileRoute =
     path: '/settings/profile',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicRunnerActionRoute = ApiPublicRunnerActionRouteImport.update({
+  id: '/api/public/runner/$action',
+  path: '/api/public/runner/$action',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -143,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/agent-completion': typeof ApiAgentCompletionRoute
   '/api/chat-completion': typeof ApiChatCompletionRoute
   '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -150,11 +170,13 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
+  '/settings/agent': typeof AuthenticatedSettingsAgentRoute
   '/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/build/': typeof AuthenticatedBuildIndexRoute
   '/chat/': typeof AuthenticatedChatIndexRoute
+  '/api/public/runner/$action': typeof ApiPublicRunnerActionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -164,6 +186,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/agent-completion': typeof ApiAgentCompletionRoute
   '/api/chat-completion': typeof ApiChatCompletionRoute
   '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -171,11 +194,13 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
+  '/settings/agent': typeof AuthenticatedSettingsAgentRoute
   '/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/build': typeof AuthenticatedBuildIndexRoute
   '/chat': typeof AuthenticatedChatIndexRoute
+  '/api/public/runner/$action': typeof ApiPublicRunnerActionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -187,6 +212,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/api/agent-completion': typeof ApiAgentCompletionRoute
   '/api/chat-completion': typeof ApiChatCompletionRoute
   '/api/code-generation': typeof ApiCodeGenerationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -194,11 +220,13 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/build/$projectId': typeof AuthenticatedBuildProjectIdRoute
   '/_authenticated/chat/$chatId': typeof AuthenticatedChatChatIdRoute
+  '/_authenticated/settings/agent': typeof AuthenticatedSettingsAgentRoute
   '/_authenticated/settings/connections': typeof AuthenticatedSettingsConnectionsRoute
   '/_authenticated/settings/models': typeof AuthenticatedSettingsModelsRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/_authenticated/build/': typeof AuthenticatedBuildIndexRoute
   '/_authenticated/chat/': typeof AuthenticatedChatIndexRoute
+  '/api/public/runner/$action': typeof ApiPublicRunnerActionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -210,6 +238,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/api/agent-completion'
     | '/api/chat-completion'
     | '/api/code-generation'
     | '/auth/callback'
@@ -217,11 +246,13 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/build/$projectId'
     | '/chat/$chatId'
+    | '/settings/agent'
     | '/settings/connections'
     | '/settings/models'
     | '/settings/profile'
     | '/build/'
     | '/chat/'
+    | '/api/public/runner/$action'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -231,6 +262,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/api/agent-completion'
     | '/api/chat-completion'
     | '/api/code-generation'
     | '/auth/callback'
@@ -238,11 +270,13 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/build/$projectId'
     | '/chat/$chatId'
+    | '/settings/agent'
     | '/settings/connections'
     | '/settings/models'
     | '/settings/profile'
     | '/build'
     | '/chat'
+    | '/api/public/runner/$action'
   id:
     | '__root__'
     | '/'
@@ -253,6 +287,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authenticated/admin'
+    | '/api/agent-completion'
     | '/api/chat-completion'
     | '/api/code-generation'
     | '/auth/callback'
@@ -260,11 +295,13 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/build/$projectId'
     | '/_authenticated/chat/$chatId'
+    | '/_authenticated/settings/agent'
     | '/_authenticated/settings/connections'
     | '/_authenticated/settings/models'
     | '/_authenticated/settings/profile'
     | '/_authenticated/build/'
     | '/_authenticated/chat/'
+    | '/api/public/runner/$action'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -275,9 +312,11 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  ApiAgentCompletionRoute: typeof ApiAgentCompletionRoute
   ApiChatCompletionRoute: typeof ApiChatCompletionRoute
   ApiCodeGenerationRoute: typeof ApiCodeGenerationRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  ApiPublicRunnerActionRoute: typeof ApiPublicRunnerActionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -337,6 +376,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/agent-completion': {
+      id: '/api/agent-completion'
+      path: '/api/agent-completion'
+      fullPath: '/api/agent-completion'
+      preLoaderRoute: typeof ApiAgentCompletionRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/chat-completion': {
       id: '/api/chat-completion'
@@ -401,6 +447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChatChatIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings/agent': {
+      id: '/_authenticated/settings/agent'
+      path: '/settings/agent'
+      fullPath: '/settings/agent'
+      preLoaderRoute: typeof AuthenticatedSettingsAgentRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings/connections': {
       id: '/_authenticated/settings/connections'
       path: '/settings/connections'
@@ -421,6 +474,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/profile'
       preLoaderRoute: typeof AuthenticatedSettingsProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/runner/$action': {
+      id: '/api/public/runner/$action'
+      path: '/api/public/runner/$action'
+      fullPath: '/api/public/runner/$action'
+      preLoaderRoute: typeof ApiPublicRunnerActionRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -445,6 +505,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedBuildProjectIdRoute: typeof AuthenticatedBuildProjectIdRoute
   AuthenticatedChatChatIdRoute: typeof AuthenticatedChatChatIdRoute
+  AuthenticatedSettingsAgentRoute: typeof AuthenticatedSettingsAgentRoute
   AuthenticatedSettingsConnectionsRoute: typeof AuthenticatedSettingsConnectionsRoute
   AuthenticatedSettingsModelsRoute: typeof AuthenticatedSettingsModelsRoute
   AuthenticatedSettingsProfileRoute: typeof AuthenticatedSettingsProfileRoute
@@ -456,6 +517,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedBuildProjectIdRoute: AuthenticatedBuildProjectIdRoute,
   AuthenticatedChatChatIdRoute: AuthenticatedChatChatIdRoute,
+  AuthenticatedSettingsAgentRoute: AuthenticatedSettingsAgentRoute,
   AuthenticatedSettingsConnectionsRoute: AuthenticatedSettingsConnectionsRoute,
   AuthenticatedSettingsModelsRoute: AuthenticatedSettingsModelsRoute,
   AuthenticatedSettingsProfileRoute: AuthenticatedSettingsProfileRoute,
@@ -474,9 +536,11 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  ApiAgentCompletionRoute: ApiAgentCompletionRoute,
   ApiChatCompletionRoute: ApiChatCompletionRoute,
   ApiCodeGenerationRoute: ApiCodeGenerationRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  ApiPublicRunnerActionRoute: ApiPublicRunnerActionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

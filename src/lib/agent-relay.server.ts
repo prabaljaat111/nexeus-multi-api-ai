@@ -48,6 +48,7 @@ export async function runOnRunner(admin: Admin, t: {
   }).select("id").single();
   if (error || !task) return { success: false, error: { type: "RELAY_ERROR", message: "Couldn't queue the task for the runner." } };
   const deadline = Date.now() + (t.timeoutSeconds + 30) * 1000;
+  const started = Date.now();
   let delay = 400;
   while (Date.now() < deadline) {
     if (t.signal.aborted) {
@@ -62,7 +63,7 @@ export async function runOnRunner(admin: Admin, t: {
       const r = row.result as ToolResult | null;
       return r && typeof r === "object" && "success" in r ? r : { success: false, error: { type: "BAD_RESULT", message: "The runner returned an invalid result." } };
     }
-    if (row.status === "queued" && Date.now() - deadline + (t.timeoutSeconds + 30) * 1000 > 20_000) {
+    if (row.status === "queued" && Date.now() - started > 20_000) {
       // Not picked up within 20s → runner is effectively offline.
       const { data: runner } = await admin.from("agent_runners").select("last_seen_at").eq("id", t.runnerId).maybeSingle();
       if (!isOnline(runner?.last_seen_at ?? null)) {

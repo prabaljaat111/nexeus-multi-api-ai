@@ -181,3 +181,13 @@ Compare mode, file uploads, RAG/knowledge, image generation, voice, branching/ve
 - Live preview is built in the browser and runs in a sandboxed iframe with no access to the app, the session or cookies. React projects load packages from esm.sh, so preview needs internet access.
 - ZIP export contains the project files plus a generated README.
 - Limits: 2 MB per project, preview supports static HTML and React (no Node/server code, no npm install).
+
+## Agent Mode (Block 16)
+
+Agent Mode lets a tool-capable model (verified by a real probe) search the web, read pages, edit files, run allow-listed commands, use Git (no push) and manage dev servers — all executed by the separate `agent-runner` on your own machine or an isolated container, never in the browser or app server.
+
+1. Settings → Agent Tools → *Pair a runner* to get a one-time code (valid 10 minutes).
+2. On your computer (non-root user): `cd agent-runner && pip install -r requirements.txt`, set `APP_URL` and `APPROVED_WORKSPACE_ROOTS` (see `.env.example`), then `python -m runner pair <CODE>` and `python -m runner start`.
+3. In a chat, pick a model and press **Agent**. Risky actions show an approval dialog.
+
+The runner only connects outbound; it refuses to run as root and stays inside the approved workspace folder. Limits: tools work only while the runner is running; dev-server previews are local URLs (no public proxy); attachments are not sent in Agent Mode.
